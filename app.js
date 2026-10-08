@@ -104,15 +104,45 @@ function show(name) {
 }
 
 /* ---------- cards ---------- */
-function cardHTML(p) {
+function cardPhotoHTML(p) {
   var c = catOf(p.category);
-  var price = naira(p.price) + (p.priceSuffix ? " " + esc(p.priceSuffix) : "");
+  if (p.images && p.images.length) {
+    return '<div class="card-photo"><img src="' + esc(p.images[0]) + '" alt="" loading="lazy"></div>';
+  }
   var initial = esc(p.title.trim().charAt(0).toUpperCase());
+  return '<div class="card-photo" style="background:' + c.bg + '"><span>' + c.icon + '</span><span class="card-init">' + initial + '</span></div>';
+}
+function cardHTML(p) {
+  var price = naira(p.price) + (p.priceSuffix ? " " + esc(p.priceSuffix) : "");
   return '<div class="card" data-id="' + esc(p.id) + '">' +
-    '<div class="card-photo" style="background:' + c.bg + '"><span>' + c.icon + '</span><span class="card-init">' + initial + '</span></div>' +
+    cardPhotoHTML(p) +
     '<div class="card-body"><div class="card-price">' + price + '</div>' +
     '<div class="card-title">' + esc(p.title) + '</div>' +
     '<div class="card-meta">' + esc(p.location) + ' · ' + timeAgo(p.at) + '</div></div></div>';
+}
+function galleryHTML(p) {
+  var c = catOf(p.category);
+  var imgs = p.images || [];
+  if (!imgs.length) {
+    return '<div class="detail-photo" style="background:' + c.bg + '">' + c.icon + '</div>';
+  }
+  var slides = imgs.map(function (src) {
+    return '<div class="gal-slide"><img src="' + esc(src) + '" alt="Item photo"></div>';
+  }).join("");
+  var dots = imgs.map(function (_, i) {
+    return '<span class="' + (i === 0 ? "on" : "") + '"></span>';
+  }).join("");
+  return '<div class="gal" id="detail-gal">' + slides + '</div>' +
+    (imgs.length > 1 ? '<div class="gal-dots" id="gal-dots">' + dots + '</div>' : '');
+}
+function bindGallery() {
+  var gal = $("#detail-gal"), dots = $("#gal-dots");
+  if (!gal || !dots) { return; }
+  var spans = dots.querySelectorAll("span");
+  gal.addEventListener("scroll", function () {
+    var i = Math.round(gal.scrollLeft / gal.clientWidth);
+    spans.forEach(function (sp, j) { sp.classList.toggle("on", j === i); });
+  });
 }
 function bindCards(root) {
   root.querySelectorAll(".card").forEach(function (el) {
@@ -190,13 +220,16 @@ function openDetail(id) {
     var c = catOf(p.category);
     var price = naira(p.price) + (p.priceSuffix ? " " + esc(p.priceSuffix) : "");
     var initial = esc(p.sellerName.trim().charAt(0).toUpperCase());
+    var sellerAva = p.sellerAvatar
+      ? '<div class="seller-ava"><img class="avatar-img" src="' + esc(p.sellerAvatar) + '" alt=""></div>'
+      : '<div class="seller-ava">' + initial + '</div>';
     $("#detail-body").innerHTML =
-      '<div class="detail-photo" style="background:' + c.bg + '">' + c.icon + '</div>' +
+      galleryHTML(p) +
       '<div class="detail-body"><div class="detail-price">' + price + '</div>' +
       '<div class="detail-title">' + esc(p.title) + '</div>' +
       '<div class="detail-meta">' + esc(p.location) + ' · ' + esc(p.condition) + ' · ' + timeAgo(p.at) + '</div>' +
       '<div class="detail-desc">' + esc(p.description) + '</div>' +
-      '<div class="seller-card"><div class="seller-ava">' + initial + '</div>' +
+      '<div class="seller-card">' + sellerAva +
       '<div><div class="seller-name">' + esc(p.sellerName) + '</div>' +
       '<div class="seller-sub">Member of Nationwide Connect</div></div></div>' +
       '<div class="safety"><h4>Safety tips</h4><ul>' +
@@ -205,6 +238,7 @@ function openDetail(id) {
       '<li>Never pay in advance for an item you have not seen.</li>' +
       '</ul></div></div>' +
       '<div class="chat-cta"><button id="detail-chat" class="btn-primary">Chat seller</button></div>';
+    bindGallery();
     $("#detail-chat").addEventListener("click", function () {
       window.NM_DB.currentUser().then(function (u) {
         if (!u) { show("auth"); toast("Log in to chat with sellers."); return; }
@@ -219,6 +253,16 @@ function openDetail(id) {
 
 /* ---------- inbox + thread ---------- */
 var threadId = null;
+var threadPoll = null;
+function stopThreadPoll() {
+  if (threadPoll) { clearInterval(threadPoll); threadPoll = null; }
+}
+function startThreadPoll() {
+  stopThreadPoll();
+  threadPoll = setInterval(function () {
+    if (threadId) { renderThreadMsgs(); }
+  }, 5000);
+}
 function renderInbox() {
   window.NM_DB.currentUser().then(function (u) {
     if (!u) { $("#inbox-list").innerHTML = ""; $("#inbox-empty").hidden = false; return; }
@@ -228,9 +272,11 @@ function renderInbox() {
       box.innerHTML = list.map(function (c) {
         var last = c.messages[c.messages.length - 1];
         var other = c.otherName || ((c.buyerPhone === u.phone) ? c.sellerName : c.buyerName);
+        var ava = c.otherAvatar
+          ? '<span class="convo-ava"><img class="avatar-img" src="' + esc(c.otherAvatar) + '" alt=""></span>'
+          : '<span class="convo-ava">' + catOf(c.productCat).icon + '</span>';
         var unread = c.unreadFor === u.phone;
-        return '<button class="convo" data-id="' + esc(c.id) + '">' +
-          '<span class="convo-ava">' + catOf(c.productCat).icon + '</span>' +
+        return '<button class="convo" data-id="' + esc(c.id) + '">' + ava +
           '<span class="convo-main"><span class="convo-top"><span class="convo-name">' + esc(other) +
           (unread ? '<span class="unread-dot"></span>' : '') + '</span>' +
           '<span class="convo-time">' + (last ? timeAgo(last.at) : "") + '</span></span>' +
@@ -258,25 +304,35 @@ function openThread(id) {
     /* mark read */
     try {
       var all = JSON.parse(localStorage.getItem("nm_convos") || "[]");
+      var key = u ? (u.phone || u.id) : null;
       for (var i = 0; i < all.length; i++) {
-        if (all[i].id === id && u && all[i].unreadFor === u.phone) { delete all[i].unreadFor; }
+        if (all[i].id === id && key && all[i].unreadFor === key) { delete all[i].unreadFor; }
       }
       localStorage.setItem("nm_convos", JSON.stringify(all));
     } catch (e) {}
     renderThreadMsgs();
     show("thread");
+    startThreadPoll();
     updateBadge();
   });
   });
 }
 function renderThreadMsgs() {
   var box = $("#thread-msgs");
-  getConvo(threadId).then(function (c) {
-    if (!c) { box.innerHTML = ""; return; }
+  Promise.all([getConvo(threadId), window.NM_DB.currentUser()]).then(function (res) {
+    var c = res[0], u = res[1];
+    if (!c || !box) { return; }
     box.innerHTML = c.messages.map(function (m) {
-      var cls = m.from === "buyer" ? "me" : "them";
-      /* "me" means the current viewer if they are the buyer; sellers see mirrored in demo */
-      return '<div class="msg ' + cls + '">' + esc(m.text) + '<span class="msg-time">' + timeAgo(m.at) + '</span></div>';
+      var mine;
+      if (m.mine !== undefined && m.mine !== null) {
+        mine = !!m.mine;
+      } else {
+        /* local convo: "from" is conversation-relative */
+        var iAmBuyer = !u || !c.buyerPhone || !u.phone || (c.buyerPhone === u.phone);
+        mine = (m.from === "buyer") ? iAmBuyer : !iAmBuyer;
+      }
+      return '<div class="msg ' + (mine ? "me" : "them") + '">' + esc(m.text) +
+        '<span class="msg-time">' + timeAgo(m.at) + '</span></div>';
     }).join("");
     box.scrollTop = box.scrollHeight;
   });
@@ -310,7 +366,38 @@ function updateBadge() {
   });
 }
 
+/* ---------- header avatars ---------- */
+function refreshHeaderAvatars() {
+  window.NM_DB.currentUser().then(function (u) {
+    var initial = u ? esc((u.name || "M").trim().charAt(0).toUpperCase()) : "☺";
+    var inner = (u && u.avatarUrl)
+      ? '<img src="' + esc(u.avatarUrl) + '" alt="">'
+      : initial;
+    $$(".topbar").forEach(function (bar) {
+      var btn = bar.querySelector(".me-mini");
+      if (!btn) {
+        btn = document.createElement("button");
+        btn.className = "me-mini";
+        btn.setAttribute("aria-label", "My profile");
+        btn.addEventListener("click", function () { renderMe(); show("me"); });
+        bar.appendChild(btn);
+      }
+      btn.innerHTML = inner;
+    });
+    var navIco = $("#nav-me-ico");
+    if (navIco) {
+      navIco.innerHTML = (u && u.avatarUrl)
+        ? '<img class="avatar-img" style="width:24px;height:24px;" src="' + esc(u.avatarUrl) + '" alt="">'
+        : "☺";
+    }
+  });
+}
+
 /* ---------- me ---------- */
+function avatarHTML(url, initial, cls) {
+  if (url) { return '<div class="' + cls + '"><img class="avatar-img" src="' + esc(url) + '" alt=""></div>'; }
+  return '<div class="' + cls + '">' + esc(initial) + '</div>';
+}
 function renderMe() {
   window.NM_DB.currentUser().then(function (u) {
     var box = $("#me-body");
@@ -321,23 +408,188 @@ function renderMe() {
       $("#me-login").addEventListener("click", function () { show("auth"); });
       return;
     }
-    window.NM_DB.listProducts({ sellerId: u.id, seller: u.phone }).then(function (mine) {
-      var html = '<div class="me-card"><div class="me-name">' + esc(u.name) + '</div>' +
-        (u.email ? '<div class="me-phone">' + esc(u.email) + '</div>' : "") +
-        (u.phone ? '<div class="me-phone">' + esc(u.phone) + '</div>' : "") +
+    var initial = esc((u.name || "M").trim().charAt(0).toUpperCase());
+    var dark = document.documentElement.getAttribute("data-theme") === "dark";
+    var html =
+      '<div class="me-card">' +
+        '<div class="me-avatar-wrap">' +
+          '<div class="me-avatar" id="me-avatar" title="Change photo">' +
+            (u.avatarUrl ? '<img class="avatar-img" src="' + esc(u.avatarUrl) + '" alt="">' : initial) +
+          '</div>' +
+          '<div><div class="me-name">' + esc(u.name) + '</div>' +
+          (u.email ? '<div class="me-detail">' + esc(u.email) + '</div>' : "") +
+          (u.phone ? '<div class="me-detail">' + esc(u.phone) + '</div>' : "") +
+          (u.address ? '<div class="me-detail">' + esc(u.address) + '</div>' : "") +
+          '<button class="me-avatar-btn" id="me-avatar-btn">Change photo</button></div>' +
+        '</div>' +
+        '<input id="me-avatar-file" type="file" accept="image/*" hidden>' +
+        '<div class="profile-form" id="profile-form">' +
+          '<label>Display name<input id="pf-name" type="text" value="' + esc(u.name) + '" maxlength="60"></label>' +
+          '<label>Phone<input id="pf-phone" type="tel" value="' + esc(u.phone || "") + '" placeholder="0803 123 4567"></label>' +
+          '<label>Address<input id="pf-address" type="text" value="' + esc(u.address || "") + '" placeholder="Street, area, city" maxlength="120"></label>' +
+          '<button class="btn-primary" id="pf-save" type="button">Save profile</button>' +
+        '</div>' +
+        '<div class="theme-row"><span>Dark mode</span>' +
+          '<label class="switch"><input type="checkbox" id="theme-toggle"' + (dark ? " checked" : "") + '><span class="slider"></span></label>' +
+        '</div>' +
         '<div class="me-actions"><button class="btn-ghost" id="me-sell">Sell an item</button>' +
-        '<button class="btn-ghost btn-danger" id="me-logout">Log out</button></div></div>' +
-        '<div class="section-head">My listings (' + mine.length + ')</div>' +
-        '<div class="grid">' + (mine.length ? mine.map(cardHTML).join("") : "") + '</div>' +
-        (mine.length ? "" : '<div class="empty">You have not posted anything yet.</div>');
-      box.innerHTML = html;
-      bindCards(box);
-      $("#me-sell").addEventListener("click", function () { show("sell"); });
-      $("#me-logout").addEventListener("click", function () {
-        window.NM_DB.signOut().then(function () { show("auth"); toast("Logged out. See you soon."); });
+        '<button class="btn-ghost btn-danger" id="me-logout">Log out</button></div>' +
+      '</div>' +
+      '<div class="section-head">My listings (<span id="me-count">0</span>)</div>' +
+      '<div class="grid" id="me-grid"></div>' +
+      '<div class="empty" id="me-empty" hidden>You have not posted anything yet.</div>';
+    box.innerHTML = html;
+
+    window.NM_DB.listProducts({ sellerId: u.id, seller: u.phone }).then(function (mine) {
+      $("#me-count").textContent = mine.length;
+      var g = $("#me-grid");
+      g.innerHTML = mine.map(cardHTML).join("");
+      bindCards(g);
+      $("#me-empty").hidden = mine.length > 0;
+    });
+
+    $("#me-sell").addEventListener("click", function () { show("sell"); });
+    $("#me-logout").addEventListener("click", function () {
+      stopThreadPoll();
+      threadId = null;
+      window.NM_DB.signOut().then(function () {
+        renderChips(); renderHome(); renderCatList(); renderInbox(); renderMe(); updateBadge(); refreshHeaderAvatars();
+        show("auth");
+        toast("Logged out. See you soon.");
+      }).catch(function (e) { toast(e.message); });
+    });
+
+    $("#theme-toggle").addEventListener("change", function (e) {
+      setTheme(e.target.checked ? "dark" : "light");
+    });
+
+    var fileInp = $("#me-avatar-file");
+    $("#me-avatar-btn").addEventListener("click", function () { fileInp.click(); });
+    $("#me-avatar").addEventListener("click", function () { fileInp.click(); });
+    fileInp.addEventListener("change", function () {
+      var f = fileInp.files && fileInp.files[0];
+      if (!f) { return; }
+      if (f.type.indexOf("image/") !== 0) { toast("Pick an image file."); return; }
+      squareCrop(f, 256).then(function (blob) {
+        toast("Uploading photo...");
+        return window.NM_DB.uploadAvatar(blob);
+      }).then(function () {
+        toast("Photo updated.");
+        renderMe(); refreshHeaderAvatars();
+      }).catch(function (e) {
+        toast(e.message.indexOf("bucket") >= 0 || e.message.indexOf("Bucket") >= 0
+          ? "Photo storage is being set up. Try again soon."
+          : e.message);
       });
+      fileInp.value = "";
+    });
+
+    $("#pf-save").addEventListener("click", function () {
+      var name = $("#pf-name").value.trim();
+      var phone = $("#pf-phone").value.trim();
+      var address = $("#pf-address").value.trim();
+      if (!name) { toast("Type your display name."); return; }
+      if (phone && !validPhone(phone)) { toast("That phone number does not look right."); return; }
+      window.NM_DB.updateProfile({ display_name: name, phone: phone, address: address }).then(function () {
+        toast("Profile saved.");
+        renderMe(); refreshHeaderAvatars();
+      }).catch(function (e) { toast(e.message); });
     });
   });
+}
+
+/* ---------- theme ---------- */
+function setTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem("nm_theme", t); } catch (e) {}
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) { meta.setAttribute("content", t === "dark" ? "#0f1311" : "#0a7a3d"); }
+}
+
+/* ---------- image compression ---------- */
+function compressImage(file, maxDim, quality) {
+  return new Promise(function (resolve, reject) {
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      URL.revokeObjectURL(url);
+      var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      var cw = Math.max(1, Math.round(img.width * scale));
+      var ch = Math.max(1, Math.round(img.height * scale));
+      var cv = document.createElement("canvas");
+      cv.width = cw; cv.height = ch;
+      cv.getContext("2d").drawImage(img, 0, 0, cw, ch);
+      cv.toBlob(function (b) {
+        b ? resolve(b) : reject(new Error("Could not read that photo."));
+      }, "image/jpeg", quality);
+    };
+    img.onerror = function () {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read that photo."));
+    };
+    img.src = url;
+  });
+}
+function squareCrop(file, size) {
+  return new Promise(function (resolve, reject) {
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      URL.revokeObjectURL(url);
+      var side = Math.min(img.width, img.height);
+      var sx = Math.round((img.width - side) / 2), sy = Math.round((img.height - side) / 2);
+      var cv = document.createElement("canvas");
+      cv.width = size; cv.height = size;
+      cv.getContext("2d").drawImage(img, sx, sy, side, side, 0, 0, size, size);
+      cv.toBlob(function (b) {
+        b ? resolve(b) : reject(new Error("Could not read that photo."));
+      }, "image/jpeg", 0.85);
+    };
+    img.onerror = function () {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read that photo."));
+    };
+    img.src = url;
+  });
+}
+
+/* ---------- sell photo picker ---------- */
+var sellPhotos = []; /* {blob, url} */
+function renderPhotoThumbs() {
+  var box = $("#photo-thumbs");
+  $("#photo-count").textContent = "(" + sellPhotos.length + " of 9)";
+  box.innerHTML = sellPhotos.map(function (p, i) {
+    return '<div class="photo-thumb"><img src="' + p.url + '" alt="">' +
+      '<button type="button" class="rm" data-i="' + i + '" aria-label="Remove">×</button>' +
+      (i === 0 ? '<span class="first-tag">Cover</span>' : "") + '</div>';
+  }).join("");
+  box.querySelectorAll(".rm").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var i = Number(b.getAttribute("data-i"));
+      URL.revokeObjectURL(sellPhotos[i].url);
+      sellPhotos.splice(i, 1);
+      renderPhotoThumbs();
+    });
+  });
+}
+function handlePhotoSelect(files) {
+  var list = Array.prototype.slice.call(files || []);
+  var room = 9 - sellPhotos.length;
+  if (list.length > room) {
+    toast("Only 9 photos per item. Picking the first " + room + ".");
+    list = list.slice(0, room);
+  }
+  var chain = Promise.resolve();
+  list.forEach(function (f) {
+    chain = chain.then(function () {
+      if (f.type.indexOf("image/") !== 0) { toast("Skipped a file that is not an image."); return; }
+      if (f.size > 15 * 1024 * 1024) { toast("Skipped a photo over 15 MB."); return; }
+      return compressImage(f, 1200, 0.75).then(function (blob) {
+        sellPhotos.push({ blob: blob, url: URL.createObjectURL(blob) });
+      }).catch(function () { toast("Could not read one photo."); });
+    });
+  });
+  return chain.then(renderPhotoThumbs);
 }
 
 /* ---------- auth ---------- */
@@ -349,7 +601,7 @@ function authError(msg) {
 function clearAuthError() { $("#auth-error").hidden = true; }
 function afterAuth(u) {
   clearAuthError();
-  renderChips(); renderHome(); renderCatList(); renderInbox(); renderMe(); updateBadge();
+  renderChips(); renderHome(); renderCatList(); renderInbox(); renderMe(); updateBadge(); refreshHeaderAvatars();
   show("home");
   toast(u.authNotice || ("Welcome, " + u.name.split(" ")[0]));
 }
@@ -418,6 +670,13 @@ document.addEventListener("DOMContentLoaded", function () {
       }).catch(function (err) { authError(err.message); });
     });
 
+    $("#google-btn").addEventListener("click", function () {
+      clearAuthError();
+      window.NM_DB.signInWithGoogle().catch(function (err) {
+        authError(err.message);
+      });
+    });
+
     /* home search */
     var searchT = null;
     $("#home-search").addEventListener("input", function () {
@@ -427,7 +686,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     /* backs */
     $("#detail-back").addEventListener("click", function () { show("home"); renderHome(); });
-    $("#thread-back").addEventListener("click", function () { show("inbox"); renderInbox(); });
+    $("#thread-back").addEventListener("click", function () { stopThreadPoll(); threadId = null; show("inbox"); renderInbox(); });
     $("#sell-back").addEventListener("click", function () { show("home"); renderHome(); });
     $("#cat-back").addEventListener("click", resetCatScreen);
 
@@ -443,6 +702,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     /* sell form */
     fillSellCats();
+    $("#sell-photos").addEventListener("change", function (e) {
+      handlePhotoSelect(e.target.files);
+      e.target.value = "";
+    });
     $("#sell-form").addEventListener("submit", function (e) {
       e.preventDefault();
       var errBox = $("#sell-error");
@@ -453,25 +716,62 @@ document.addEventListener("DOMContentLoaded", function () {
         category: $("#sell-category").value,
         condition: $("#sell-condition").value,
         location: $("#sell-location").value,
-        description: $("#sell-desc").value.trim()
+        description: $("#sell-desc").value.trim(),
+        photoBlobs: sellPhotos.map(function (p) { return p.blob; })
       };
       if (!data.title) { errBox.textContent = "Give your item a title."; errBox.hidden = false; return; }
       if (!data.price || Number(data.price) <= 0) { errBox.textContent = "Type a valid price in naira."; errBox.hidden = false; return; }
       if (!data.description) { errBox.textContent = "Describe your item in a few words."; errBox.hidden = false; return; }
+      var btn = $("#sell-form .btn-primary");
+      btn.disabled = true;
       window.NM_DB.createProduct(data).then(function (p) {
         $("#sell-form").reset();
+        sellPhotos.forEach(function (ph) { URL.revokeObjectURL(ph.url); });
+        sellPhotos = [];
+        renderPhotoThumbs();
         renderHome();
         toast("Your item is live on Nationwide Connect.");
         openDetail(p.id);
       }).catch(function (err) {
         if (err.message.indexOf("Log in") >= 0) { show("auth"); }
+        if (err.message.indexOf("STORAGE_BLOCKED:") === 0) {
+          /* Listing saved; photos need the storage buckets. */
+          $("#sell-form").reset();
+          sellPhotos.forEach(function (ph) { URL.revokeObjectURL(ph.url); });
+          sellPhotos = [];
+          renderPhotoThumbs();
+          renderHome();
+          toast("Item is live. Photo storage is being set up, so it posted without photos.");
+          if (err.productId) { openDetail(err.productId); }
+          return;
+        }
         errBox.textContent = err.message; errBox.hidden = false;
-      });
+      }).then(function () { btn.disabled = false; });
     });
 
     /* boot: if logged in go home, else auth */
+    /* OAuth error return (e.g. Google provider not enabled yet) */
+    (function () {
+      var err = null, desc = null;
+      try {
+        var h = window.location.hash || "";
+        var q = window.location.search || "";
+        var m = h.match(/error=([^&]+)/) || q.match(/error=([^&]+)/);
+        var d = h.match(/error_description=([^&]+)/) || q.match(/error_description=([^&]+)/);
+        if (m) { err = decodeURIComponent(m[1]); }
+        if (d) { desc = decodeURIComponent(d[1].replace(/\+/g, " ")); }
+      } catch (e) {}
+      if (err) {
+        var msg = /provider/i.test(err + " " + (desc || ""))
+          ? "Google login is being set up. Use email for now."
+          : "Login did not complete. Try again.";
+        setTimeout(function () { authError(msg); }, 300);
+        try { history.replaceState(null, "", window.location.pathname); } catch (e) {}
+      }
+    })();
+
     window.NM_DB.currentUser().then(function (u) {
-      renderChips(); renderHome(); renderCatList(); renderInbox(); renderMe(); updateBadge();
+      renderChips(); renderHome(); renderCatList(); renderInbox(); renderMe(); updateBadge(); refreshHeaderAvatars();
       show(u ? "home" : "auth");
     });
   });

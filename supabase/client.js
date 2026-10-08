@@ -160,7 +160,9 @@
       condition: r.condition || "Used",
       sellerName: prof.display_name || "Seller",
       sellerPhone: prof.phone || "",
+      sellerAvatar: prof.avatar_url || "",
       sellerId: r.seller_id || null,
+      images: r.image_urls || [],
       at: r.created_at ? Date.parse(r.created_at) : Date.now(),
       live: true
     };
@@ -304,23 +306,38 @@
     },
 
     signOut: function () {
-      if (this.mode === "demo" || !this.client) { return demoSignOut(); }
-      return this.client.auth.signOut().catch(function () {});
+      var self = this;
+      /* Full local clear first so no cached user can reappear. */
+      LS.del(K.session);
+      _catsCache = null;
+      if (self.mode === "demo" || !self.client) { return Promise.resolve(); }
+      return self.client.auth.signOut().then(function () {}, function () {}).then(function () {
+        return self.client.auth.getSession();
+      }).then(function (res) {
+        if (res.data && res.data.session) { throw new Error("Could not log out. Try again."); }
+      });
     },
 
     currentUser: function () {
       var self = this;
       if (self.mode === "demo" || !self.client) { return demoCurrentUser(); }
       return self._sbUser().then(function (u) {
-        if (!u) { return demoCurrentUser(); }
+        if (!u) { return Promise.resolve(null); }
         var meta = u.user_metadata || {};
-        return {
-          id: u.id,
-          email: u.email || "",
-          phone: u.phone || meta.phone || "",
-          name: meta.display_name || u.email || "Member",
-          supabase: true
-        };
+        /* best effort profile row for OAuth users too */
+        self._ensureProfile(u);
+        return self.client.from("profiles").select("display_name,phone,address,avatar_url").eq("id", u.id).maybeSingle().then(function (pr) {
+          var prof = (pr && pr.data) || {};
+          return {
+            id: u.id,
+            email: u.email || "",
+            phone: prof.phone || u.phone || meta.phone || "",
+            address: prof.address || "",
+            avatarUrl: prof.avatar_url || "",
+            name: prof.display_name || meta.display_name || u.email || "Member",
+            supabase: true
+          };
+        });
       });
     },
 
@@ -336,7 +353,7 @@
       /* Supabase mode: live rows + seed listings + anything posted in demo
          before the switch, merged newest first. Never breaks the feed. */
       return self.client.from("products")
-        .select("*, categories(name), profiles(display_name,phone)")
+        .select("*, categories(name), profiles(display_name,phone,avatar_url)")
         .eq("status", "active")
         .order("created_at", { ascending: false })
         .limit(200)
@@ -396,11 +413,130 @@
             location: data.location || "",
             condition: data.condition || "Used",
             status: "active"
-          }).select("*, categories(name), profiles(display_name,phone)").single();
+          }).select("id").single();
         }).then(function (res) {
+          if (res.error) { throw res.error; }
+          var pid = res.data.id;
+          var photos = data.photoBlobs || [];
+          if (!photos.length) { return self._getProduct(pid); }
+          /* Photos upload after the row exists; a storage failure must
+             never kill the listing. */
+          return self.uploadProductPhotos(pid, photos).then(function () {
+            return self._getProduct(pid);
+          }, function (err) {
+            var e = new Error("STORAGE_BLOCKED:" + (err.message || "upload failed"));
+            e.productId = pid;
+            throw e;
+          });
+        });
+      });
+    },
+
+    _getProduct: function (pid) {
+      var self = this;
+      return self.client.from("products")
+        .select("*, categories(name), profiles(display_name,phone,avatar_url)")
+        .eq("id", pid).single().then(function (res) {
           if (res.error) { throw res.error; }
           return mapProductRow(res.data);
         });
+    },
+
+    /* ----- product photos: up to 9, compressed client side ----- */
+    uploadProductPhotos: function (productId, blobs) {
+      var self = this;
+      if (self.mode !== "supabase" || !self.client) { return Promise.reject(new Error("Photo upload needs a connection.")); }
+      var urls = [];
+      var chain = Promise.resolve();
+      blobs.slice(0, 9).forEach(function (blob, i) {
+        chain = chain.then(function () {
+          var path = "products/" + productId + "/" + i + ".jpg";
+          return self.client.storage.from("product-images").upload(path, blob, {
+            contentType: "image/jpeg", upsert: true
+          }).then(function (res) {
+            if (res.error) { throw res.error; }
+            var pub = self.client.storage.from("product-images").getPublicUrl(path);
+            urls.push(pub.data.publicUrl);
+          });
+        });
+      });
+      return chain.then(function () {
+        if (!urls.length) { return urls; }
+        return self.client.from("products").update({ image_urls: urls }).eq("id", productId).then(function (res) {
+          if (res.error) { throw res.error; }
+          return urls;
+        });
+      });
+    },
+
+    /* ----- avatar: square crop client side, one file per user ----- */
+    uploadAvatar: function (blob) {
+      var self = this;
+      if (self.mode !== "supabase" || !self.client) { return Promise.reject(new Error("Avatar upload needs a connection.")); }
+      return self._sbUser().then(function (u) {
+        if (!u) { throw new Error("Log in first."); }
+        var path = "avatars/" + u.id + ".jpg";
+        return self.client.storage.from("avatars").upload(path, blob, {
+          contentType: "image/jpeg", upsert: true
+        }).then(function (res) {
+          if (res.error) { throw res.error; }
+          var pub = self.client.storage.from("avatars").getPublicUrl(path);
+          var url = pub.data.publicUrl;
+          return self.client.from("profiles").upsert({ id: u.id, avatar_url: url }, { onConflict: "id" }).then(function (pr) {
+            if (pr.error) { throw pr.error; }
+            return url;
+          });
+        });
+      });
+    },
+
+    /* ----- profile details ----- */
+    updateProfile: function (fields) {
+      var self = this;
+      if (self.mode !== "supabase" || !self.client) { return Promise.reject(new Error("Profile update needs a connection.")); }
+      return self._sbUser().then(function (u) {
+        if (!u) { throw new Error("Log in first."); }
+        var row = { id: u.id };
+        if (fields.display_name !== undefined) { row.display_name = fields.display_name; }
+        if (fields.phone !== undefined) { row.phone = fields.phone || null; }
+        if (fields.address !== undefined) { row.address = fields.address || null; }
+        if (fields.avatar_url !== undefined) { row.avatar_url = fields.avatar_url || null; }
+        return self.client.from("profiles").upsert(row, { onConflict: "id" }).then(function (res) {
+          if (res.error) { throw res.error; }
+        });
+      });
+    },
+
+    getProfile: function () {
+      var self = this;
+      if (self.mode !== "supabase" || !self.client) { return Promise.resolve(null); }
+      return self._sbUser().then(function (u) {
+        if (!u) { return Promise.resolve(null); }
+        return self.client.from("profiles").select("display_name,phone,address,avatar_url").eq("id", u.id).maybeSingle().then(function (res) {
+          return (res && res.data) || null;
+        });
+      });
+    },
+
+    /* ----- Google OAuth (provider configured in dashboard separately) ----- */
+    signInWithGoogle: function () {
+      var self = this;
+      if (self.mode !== "supabase" || !self.client) {
+        return Promise.reject(new Error("Google login is being set up. Use email for now."));
+      }
+      var redirectTo = window.location.href.split("#")[0].split("?")[0];
+      return self.client.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: redirectTo }
+      }).then(function (res) {
+        if (res.error) { throw res.error; }
+        return res;
+      }).catch(function (err) {
+        var m = String((err && err.message) || "").toLowerCase();
+        if (m.indexOf("provider") >= 0 && (m.indexOf("not enabled") >= 0 || m.indexOf("disabled") >= 0 || m.indexOf("unsupported") >= 0)) {
+          throw new Error("Google login is being set up. Use email for now.");
+        }
+        throw err;
       });
     },
 
@@ -479,8 +615,8 @@
         return self.client.from("conversations")
           .select("id,product_id,buyer_id,seller_id,updated_at," +
             "products!inner(title,price,categories(name))," +
-            "buyer:profiles!conversations_buyer_id_fkey(display_name,phone)," +
-            "seller:profiles!conversations_seller_id_fkey(display_name,phone)")
+            "buyer:profiles!conversations_buyer_id_fkey(display_name,phone,avatar_url)," +
+            "seller:profiles!conversations_seller_id_fkey(display_name,phone,avatar_url)")
           .or("buyer_id.eq." + u.id + ",seller_id.eq." + u.id)
           .order("updated_at", { ascending: false })
           .then(function (res) {
@@ -512,6 +648,7 @@
                   buyerPhone: (c.buyer || {}).phone || "",
                   buyerName: (c.buyer || {}).display_name || "",
                   otherName: other.display_name || "Member",
+                  otherAvatar: other.avatar_url || "",
                   messages: last ? [{ from: "other", text: last.text, at: last.at }] : [],
                   updatedAt: Date.parse(c.updated_at),
                   live: true
@@ -542,8 +679,8 @@
         return self.client.from("conversations")
           .select("id,product_id,buyer_id,seller_id," +
             "products!inner(title,price,categories(name))," +
-            "buyer:profiles!conversations_buyer_id_fkey(display_name,phone)," +
-            "seller:profiles!conversations_seller_id_fkey(display_name,phone)")
+            "buyer:profiles!conversations_buyer_id_fkey(display_name,phone,avatar_url)," +
+            "seller:profiles!conversations_seller_id_fkey(display_name,phone,avatar_url)")
           .eq("id", id).maybeSingle().then(function (res) {
             if (res.error) { throw res.error; }
             if (!res.data) { return localGet(); }
@@ -561,11 +698,13 @@
                   productCat: CAT_SLUG_BY_NAME[(prod.categories || {}).name] || "services",
                   sellerName: (c.seller || {}).display_name || "Seller",
                   sellerPhone: (c.seller || {}).phone || "",
+                  sellerAvatar: (c.seller || {}).avatar_url || "",
                   buyerPhone: (c.buyer || {}).phone || "",
                   buyerName: (c.buyer || {}).display_name || "",
+                  buyerAvatar: (c.buyer || {}).avatar_url || "",
                   messages: (mr.data || []).map(function (m) {
                     return {
-                      from: m.sender_id === u.id ? "buyer" : "seller",
+                      mine: m.sender_id === u.id,
                       text: m.body,
                       at: Date.parse(m.created_at)
                     };
