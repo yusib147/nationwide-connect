@@ -43,16 +43,21 @@ async function run() {
 
   ok("1 boot shows auth screen", activeScreen() === "screen-auth");
 
-  /* 2 sign up */
+  /* 2 sign up with email */
+  var testEmail = "yusibrahim147+sbtest" + Date.now() + "@gmail.com";
+  var testPass = "TestPass123!";
   setVal("#signup-name", "Test User");
+  setVal("#signup-email", testEmail);
   setVal("#signup-phone", "08031234567");
-  setVal("#signup-pass", "test1234");
+  setVal("#signup-pass", testPass);
   click("#tab-signup");
   submit("#form-signup");
-  await sleep(600);
-  ok("2 sign up with phone number lands on home", activeScreen() === "screen-home");
-  var sess = JSON.parse(localStorage.getItem("nm_session") || "null");
-  ok("2b session stored", !!(sess && sess.phone === "08031234567"));
+  await sleep(3000);
+  ok("2a sign up with email lands on home", activeScreen() === "screen-home");
+  var me = await window.NM_DB.currentUser();
+  ok("2b session active with email", !!(me && me.email === testEmail));
+  var prof = await window.NM_DB.client.from("profiles").select("phone,display_name").eq("id", me.id).maybeSingle();
+  ok("2c profile row created with phone", !!(prof.data && prof.data.phone === "08031234567"));
 
   /* 3 log out */
   click('.nav-btn[data-go="me"]');
@@ -63,10 +68,10 @@ async function run() {
   ok("3b log out returns to auth", activeScreen() === "screen-auth");
 
   /* 4 log back in */
-  setVal("#login-phone", "08031234567");
-  setVal("#login-pass", "test1234");
+  setVal("#login-email", testEmail);
+  setVal("#login-pass", testPass);
   submit("#form-login");
-  await sleep(600);
+  await sleep(2500);
   ok("4 log back in lands on home", activeScreen() === "screen-home");
 
   /* 5 post a product */
@@ -84,6 +89,11 @@ async function run() {
   ok("5b posting goes to detail screen", activeScreen() === "screen-detail");
   ok("5c detail shows the new title", $("#detail-body").textContent.indexOf("Test Nokia Torch Phone") >= 0);
   ok("5d detail shows naira price", $("#detail-body").textContent.indexOf("₦15,000") >= 0);
+
+  /* 5e product persisted in Supabase (survives reload) */
+  var prow = await window.NM_DB.client.from("products").select("id,seller_id").eq("title", "Test Nokia Torch Phone").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  ok("5e product row persisted in Supabase", !!(prow.data && prow.data.id));
+  window._testProductId = prow.data && prow.data.id;
 
   /* 6 find it on Home */
   click("#detail-back");
@@ -147,6 +157,21 @@ async function run() {
   /* 12 console errors */
   ok("12 zero console errors", errors.length === 0);
   if (errors.length) { errors.forEach(function (e) { log("ERR " + e); }); }
+
+  /* 13 cleanup test rows */
+  try {
+    var me2 = await window.NM_DB.currentUser();
+    if (window._testProductId) {
+      await window.NM_DB.client.from("products").delete().eq("id", window._testProductId);
+    }
+    if (me2 && me2.id) {
+      await window.NM_DB.client.from("products").delete().eq("seller_id", me2.id).eq("title", "Test Nokia Torch Phone");
+      await window.NM_DB.client.from("profiles").delete().eq("id", me2.id);
+      await window.NM_DB.signOut();
+    }
+    var gone = await window.NM_DB.client.from("products").select("id").eq("title", "Test Nokia Torch Phone").limit(1);
+    ok("13 test rows cleaned up", !gone.data || gone.data.length === 0);
+  } catch (e) { ok("13 test rows cleaned up", false); log("cleanup err " + e.message); }
 
   var pass = results.filter(function (r) { return r.pass; }).length;
   document.title = "TESTS:DONE:" + pass + "/" + results.length;

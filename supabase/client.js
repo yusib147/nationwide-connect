@@ -3,9 +3,8 @@
    in config.js. With keys set it runs in SUPABASE MODE:
    - categories and products are read live from Supabase (seed listings are
      merged in so the feed stays rich)
-   - phone login first tries Supabase SMS codes; the project has no SMS
-     provider yet, so it gracefully falls back to quick demo login and the
-     app keeps working. Nothing here ever throws uncaught.
+   - auth is email + password via Supabase Auth; phone is an optional
+     profile contact field, never the login credential
    The app calls the same functions either way. */
 (function () {
   "use strict";
@@ -189,7 +188,9 @@
         var q = filter.query.toLowerCase();
         if ((p.title + " " + (p.description || "") + " " + (p.location || "")).toLowerCase().indexOf(q) < 0) { return false; }
       }
-      if (filter.seller && p.sellerPhone !== filter.seller) { return false; }
+      if (filter.sellerId) {
+        if (p.sellerId !== filter.sellerId) { return false; }
+      } else if (filter.seller && p.sellerPhone !== filter.seller) { return false; }
       return true;
     });
   }
@@ -198,7 +199,6 @@
   var DB = {
     mode: live ? "supabase" : "demo",
     client: null,
-    authFallback: false,
 
     init: function () {
       var self = this;
@@ -251,74 +251,74 @@
       }).catch(function () { return null; });
     },
 
-    /* ----- auth ----- */
-    signUp: function (name, phone, password) {
+    _ensureProfile: function (u, phone, name) {
       var self = this;
-      if (self.mode === "demo" || self.authFallback) { return demoSignUp(name, phone, password); }
-      return self.client.auth.signInWithOtp({ phone: toE164(phone) }).then(function (res) {
-        if (res.error) { throw res.error; }
-        return { phone: phone, name: name, otpSent: true };
-      }).catch(function (err) {
-        if (otpNotConfigured(err)) {
-          /* No SMS provider on the project yet: quick demo login instead. */
-          self.authFallback = true;
-          return demoSignUp(name, phone, password).then(function (r) {
-            r.authNotice = "SMS login is not set up yet. You are in with quick demo login.";
-            return r;
-          });
-        }
-        throw err;
-      });
+      if (!u || !self.client) { return Promise.resolve(); }
+      var meta = u.user_metadata || {};
+      var row = { id: u.id, display_name: name || meta.display_name || u.email || "Member" };
+      var ph = (phone !== undefined && phone !== null && phone !== "") ? phone : (meta.phone || null);
+      if (ph) { row.phone = ph; }
+      /* best effort: never break auth on a profile write */
+      return self.client.from("profiles").upsert(row, { onConflict: "id" }).then(function () {}, function () {});
     },
 
-    verifyOtp: function (phone, code) {
+    /* ----- auth: email + password. Phone is a profile contact field only. ----- */
+    signUp: function (name, email, phone, password) {
       var self = this;
-      return self.client.auth.verifyOtp({ phone: toE164(phone), token: code, type: "sms" }).then(function (res) {
+      if (self.mode === "demo" || !self.client) { return demoSignUp(name, phone || email, password); }
+      return self.client.auth.signUp({
+        email: email,
+        password: password,
+        options: { data: { display_name: name, phone: phone || "" } }
+      }).then(function (res) {
         if (res.error) { throw res.error; }
         var u = res.data.user;
-        /* best effort profile row */
-        if (u) {
-          self.client.from("profiles").upsert({
-            id: u.id, phone: u.phone || phone, display_name: (u.user_metadata && u.user_metadata.display_name) || phone
-          }).then(function () {}, function () {});
+        if (!u) { throw new Error("Could not create your account. Try again."); }
+        if (res.data.session) {
+          return self._ensureProfile(u, phone, name).then(function () {
+            return { id: u.id, email: u.email, phone: phone || "", name: name, supabase: true };
+          });
         }
-        return u;
+        /* Email confirmation is still on: account created, user confirms first. */
+        return { email: email, name: name, confirmNotice: "Account created. Check your email to confirm it, then log in." };
       });
     },
 
-    signIn: function (phone, password) {
+    signIn: function (email, password) {
       var self = this;
-      if (self.mode === "demo" || self.authFallback) { return demoSignIn(phone, password); }
-      return self.client.auth.signInWithOtp({ phone: toE164(phone) }).then(function (res) {
+      if (self.mode === "demo" || !self.client) { return demoSignIn(email, password); }
+      return self.client.auth.signInWithPassword({ email: email, password: password }).then(function (res) {
         if (res.error) { throw res.error; }
-        return { phone: phone, otpSent: true };
-      }).catch(function (err) {
-        if (otpNotConfigured(err)) {
-          self.authFallback = true;
-          return demoSignIn(phone, password).then(function (r) {
-            r.authNotice = "SMS login is not set up yet. You are in with quick demo login.";
-            return r;
-          });
-        }
-        throw err;
+        var u = res.data.user;
+        return self._ensureProfile(u).then(function () {
+          var meta = u.user_metadata || {};
+          return {
+            id: u.id,
+            email: u.email || "",
+            phone: u.phone || meta.phone || "",
+            name: meta.display_name || u.email || "Member",
+            supabase: true
+          };
+        });
       });
     },
 
     signOut: function () {
-      if (this.mode === "demo" || this.authFallback) { return demoSignOut(); }
+      if (this.mode === "demo" || !this.client) { return demoSignOut(); }
       return this.client.auth.signOut().catch(function () {});
     },
 
     currentUser: function () {
       var self = this;
-      if (self.mode === "demo" || self.authFallback || !self.client) { return demoCurrentUser(); }
+      if (self.mode === "demo" || !self.client) { return demoCurrentUser(); }
       return self._sbUser().then(function (u) {
         if (!u) { return demoCurrentUser(); }
         var meta = u.user_metadata || {};
         return {
           id: u.id,
+          email: u.email || "",
           phone: u.phone || meta.phone || "",
-          name: meta.display_name || u.phone || "Member",
+          name: meta.display_name || u.email || "Member",
           supabase: true
         };
       });
@@ -384,7 +384,7 @@
       }
       /* Supabase mode: needs a real Supabase session for the RLS policy. */
       return self._sbUser().then(function (u) {
-        if (!u) { throw new Error("Live posting needs SMS login. It is not set up yet."); }
+        if (!u) { throw new Error("Log in to post an item."); }
         return self._catIdForSlug(data.category).then(function (catId) {
           return self.client.from("products").insert({
             seller_id: u.id,

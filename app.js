@@ -38,6 +38,9 @@ function validPhone(p) {
   p = String(p).replace(/[\s-]/g, "");
   return /^(0[789][01]\d{8}|\+234[789][01]\d{8})$/.test(p);
 }
+function validEmail(e) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || "").trim());
+}
 
 /* ---------- categories ---------- */
 var CATS = [
@@ -318,9 +321,10 @@ function renderMe() {
       $("#me-login").addEventListener("click", function () { show("auth"); });
       return;
     }
-    window.NM_DB.listProducts({ seller: u.phone }).then(function (mine) {
+    window.NM_DB.listProducts({ sellerId: u.id, seller: u.phone }).then(function (mine) {
       var html = '<div class="me-card"><div class="me-name">' + esc(u.name) + '</div>' +
-        '<div class="me-phone">' + esc(u.phone) + '</div>' +
+        (u.email ? '<div class="me-phone">' + esc(u.email) + '</div>' : "") +
+        (u.phone ? '<div class="me-phone">' + esc(u.phone) + '</div>' : "") +
         '<div class="me-actions"><button class="btn-ghost" id="me-sell">Sell an item</button>' +
         '<button class="btn-ghost btn-danger" id="me-logout">Log out</button></div></div>' +
         '<div class="section-head">My listings (' + mine.length + ')</div>' +
@@ -376,55 +380,41 @@ document.addEventListener("DOMContentLoaded", function () {
     /* auth tabs */
     $("#tab-login").addEventListener("click", function () {
       $("#tab-login").classList.add("active"); $("#tab-signup").classList.remove("active");
-      $("#form-login").hidden = false; $("#form-signup").hidden = true; $("#form-otp").hidden = true; clearAuthError();
+      $("#form-login").hidden = false; $("#form-signup").hidden = true; clearAuthError();
     });
     $("#tab-signup").addEventListener("click", function () {
       $("#tab-signup").classList.add("active"); $("#tab-login").classList.remove("active");
-      $("#form-signup").hidden = false; $("#form-login").hidden = true; $("#form-otp").hidden = true; clearAuthError();
+      $("#form-signup").hidden = false; $("#form-login").hidden = true; clearAuthError();
     });
-
-    var otpCtx = null;
 
     $("#form-signup").addEventListener("submit", function (e) {
       e.preventDefault(); clearAuthError();
       var name = $("#signup-name").value.trim();
+      var email = $("#signup-email").value.trim();
       var phone = $("#signup-phone").value.trim();
       var pass = $("#signup-pass").value;
       if (!name) { authError("Tell us your name."); return; }
-      if (!validPhone(phone)) { authError("Type a valid Nigerian phone number, like 0803 123 4567."); return; }
-      if (pass.length < 4) { authError("Password needs at least 4 characters."); return; }
-      window.NM_DB.signUp(name, phone, pass).then(function (r) {
-        if (r.otpSent) {
-          otpCtx = { phone: phone, name: name };
-          $("#otp-phone-label").textContent = phone;
-          $("#form-signup").hidden = true; $("#form-otp").hidden = false;
-          toast("Code sent. Check your SMS.");
+      if (!validEmail(email)) { authError("Type a valid email address."); return; }
+      if (phone && !validPhone(phone)) { authError("That phone number does not look right. You can leave it empty."); return; }
+      if (pass.length < 6) { authError("Password needs at least 6 characters."); return; }
+      window.NM_DB.signUp(name, email, phone, pass).then(function (r) {
+        if (r.confirmNotice) {
+          toast(r.confirmNotice);
+          $("#tab-login").classList.add("active"); $("#tab-signup").classList.remove("active");
+          $("#form-login").hidden = false; $("#form-signup").hidden = true;
+          $("#login-email").value = email;
         } else { afterAuth(r); }
       }).catch(function (err) { authError(err.message); });
     });
 
     $("#form-login").addEventListener("submit", function (e) {
       e.preventDefault(); clearAuthError();
-      var phone = $("#login-phone").value.trim();
+      var email = $("#login-email").value.trim();
       var pass = $("#login-pass").value;
-      if (!validPhone(phone)) { authError("Type a valid Nigerian phone number, like 0803 123 4567."); return; }
+      if (!validEmail(email)) { authError("Type a valid email address."); return; }
       if (!pass) { authError("Type your password."); return; }
-      window.NM_DB.signIn(phone, pass).then(function (r) {
-        if (r.otpSent) {
-          otpCtx = { phone: phone, name: phone };
-          $("#otp-phone-label").textContent = phone;
-          $("#form-login").hidden = true; $("#form-otp").hidden = false;
-          toast("Code sent. Check your SMS.");
-        } else { afterAuth(r); }
-      }).catch(function (err) { authError(err.message); });
-    });
-
-    $("#form-otp").addEventListener("submit", function (e) {
-      e.preventDefault(); clearAuthError();
-      var code = $("#otp-code").value.trim();
-      if (!otpCtx || code.length < 4) { authError("Type the code we sent you."); return; }
-      window.NM_DB.verifyOtp(otpCtx.phone, code).then(function () {
-        afterAuth({ phone: otpCtx.phone, name: otpCtx.name });
+      window.NM_DB.signIn(email, pass).then(function (r) {
+        afterAuth(r);
       }).catch(function (err) { authError(err.message); });
     });
 

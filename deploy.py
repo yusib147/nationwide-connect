@@ -5,8 +5,8 @@ import base64, hashlib, json, os, subprocess, sys, time
 SRC = os.path.expanduser("~/workspace/naija-market")
 SKIP = {"tests/shot.html"}
 WRAPPER = "/opt/hatch/bin/vercel"
-PROJECT = "naija-market"
-ALIAS = "naija-market-skepterforge1471-8639s-projects.vercel.app"
+PROJECT = "nationwide-connect-demo1"
+ALIAS = "nationwide-connect-demo1-skepterforge1471-8639s-projects.vercel.app"
 
 def call_tool(name, args):
     cmd = [WRAPPER, "call-tool", "--name", name, "--arguments-json", json.dumps(args)]

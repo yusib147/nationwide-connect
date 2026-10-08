@@ -23,22 +23,18 @@
       </div>
       <div id="auth-error" class="auth-error" hidden></div>
       <form id="form-login" class="auth-form">
-        <label>Phone number<input id="login-phone" type="tel" inputmode="tel" placeholder="0803 123 4567" autocomplete="tel"></label>
+        <label>Email<input id="login-email" type="email" inputmode="email" placeholder="you@example.com" autocomplete="email"></label>
         <label>Password<input id="login-pass" type="password" placeholder="Your password" autocomplete="current-password"></label>
         <button type="submit" class="btn-primary">Log in</button>
       </form>
       <form id="form-signup" class="auth-form" hidden>
         <label>Full name<input id="signup-name" type="text" placeholder="Your name" autocomplete="name"></label>
-        <label>Phone number<input id="signup-phone" type="tel" inputmode="tel" placeholder="0803 123 4567" autocomplete="tel"></label>
+        <label>Email<input id="signup-email" type="email" inputmode="email" placeholder="you@example.com" autocomplete="email"></label>
+        <label>Phone number (optional)<input id="signup-phone" type="tel" inputmode="tel" placeholder="0803 123 4567" autocomplete="tel"></label>
         <label>Password<input id="signup-pass" type="password" placeholder="Choose a password" autocomplete="new-password"></label>
         <button type="submit" class="btn-primary">Create account</button>
       </form>
-      <form id="form-otp" class="auth-form" hidden>
-        <p class="auth-sub">We sent a code to <b id="otp-phone-label"></b>. Type it below.</p>
-        <label>Code<input id="otp-code" type="text" inputmode="numeric" placeholder="6 digit code" maxlength="6"></label>
-        <button type="submit" class="btn-primary">Verify</button>
-      </form>
-      <p class="auth-note">Demo mode: accounts live on this device only, until Supabase is linked.</p>
+      <p class="auth-note">Add your phone number so buyers can reach you by call or chat.</p>
     </div>
   </section>
 
