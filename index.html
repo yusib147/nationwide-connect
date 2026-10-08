@@ -58,6 +58,18 @@ try {
     <div class="search-row">
       <input id="home-search" type="search" placeholder="Search products" aria-label="Search products">
     </div>
+    <div class="trend-wrap" id="trend-wrap" hidden>
+      <div class="trend-title" id="trend-title">Trending now</div>
+      <div class="trend-chips" id="trend-chips"></div>
+    </div>
+    <div class="filter-bar">
+      <button class="filter-pill" id="filter-verified"><span class="dot"></span>Verified only</button>
+      <button class="filter-pill" id="filter-near"><span class="dot"></span>Near me</button>
+    </div>
+    <div class="rv-wrap" id="rv-wrap" hidden>
+      <div class="rv-title">Recently viewed</div>
+      <div class="rv-strip" id="rv-strip"></div>
+    </div>
     <div id="home-chips" class="chips"></div>
     <div id="home-grid" class="grid"></div>
     <div id="home-empty" class="empty" hidden>No items match your search yet. Try another word.</div>
@@ -100,10 +112,20 @@ try {
       </div>
     </header>
     <div id="thread-msgs" class="thread-msgs"></div>
+    <div class="quick-replies" id="quick-replies"></div>
     <form id="thread-form" class="thread-form">
       <input id="thread-input" type="text" placeholder="Type a message" autocomplete="off">
       <button type="submit" class="btn-primary">Send</button>
     </form>
+  </section>
+
+  <!-- SELLER STOREFRONT -->
+  <section id="screen-seller" class="screen">
+    <header class="topbar nav-bar">
+      <button id="seller-back" class="icon-btn" aria-label="Back">‹</button>
+      <h2 class="page-title">Seller shop</h2>
+    </header>
+    <div id="seller-body"></div>
   </section>
 
   <!-- ME -->
@@ -135,6 +157,11 @@ try {
         <div id="photo-thumbs" class="photo-thumbs"></div>
         <p class="photo-hint">Up to 9 photos. The first photo shows on the card.</p>
       </div>
+      <div class="complete-meter" id="complete-meter">
+        <div class="complete-top"><span class="complete-label">Listing strength</span><span class="complete-pct" id="complete-pct">0%</span></div>
+        <div class="complete-bar"><div class="complete-fill" id="complete-fill" style="width:0%"></div></div>
+        <p class="complete-tip" id="complete-tip">Add a title to get started.</p>
+      </div>
       <button type="submit" class="btn-primary">Post item</button>
     </form>
   </section>
@@ -149,6 +176,8 @@ try {
   </nav>
 
   <div id="toast" class="toast" hidden></div>
+  <div id="modal-root"></div>
+  <div id="fs-root"></div>
 </div>
 <script src="config.js"></script>
 <script src="supabase/client.js"></script>

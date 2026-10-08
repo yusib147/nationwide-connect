@@ -643,6 +643,8 @@
                   productTitle: prod.title || "",
                   productPrice: Number(prod.price || 0),
                   productCat: CAT_SLUG_BY_NAME[(prod.categories || {}).name] || "services",
+                  buyerId: c.buyer_id || null,
+                  sellerId: c.seller_id || null,
                   sellerName: (c.seller || {}).display_name || "Seller",
                   sellerPhone: (c.seller || {}).phone || "",
                   buyerPhone: (c.buyer || {}).phone || "",
@@ -696,6 +698,8 @@
                   productTitle: prod.title || "",
                   productPrice: Number(prod.price || 0),
                   productCat: CAT_SLUG_BY_NAME[(prod.categories || {}).name] || "services",
+                  buyerId: c.buyer_id || null,
+                  sellerId: c.seller_id || null,
                   sellerName: (c.seller || {}).display_name || "Seller",
                   sellerPhone: (c.seller || {}).phone || "",
                   sellerAvatar: (c.seller || {}).avatar_url || "",
@@ -745,6 +749,160 @@
           if (res.error) { throw res.error; }
         });
       });
+    },
+
+    /* ----- reports ----- */
+    fileReport: function (productId, reason) {
+      var self = this;
+      function localOnly() { return Promise.resolve({ local: true }); }
+      if (self.mode !== "supabase" || !self.client) { return localOnly(); }
+      return self._sbUser().then(function (u) {
+        if (!u) { return localOnly(); }
+        return self.client.from("reports").insert({
+          reporter_id: u.id, product_id: productId, reason: reason
+        }).then(function (res) {
+          /* RLS may block the write on some projects; the app still
+             hides the listing locally so the reporter is protected. */
+          return res.error ? { local: true, dbBlocked: true } : { ok: true };
+        });
+      }).catch(function () { return { local: true }; });
+    },
+
+    /* ----- favorites (logged in users, Supabase) ----- */
+    toggleFavorite: function (productId) {
+      var self = this;
+      if (self.mode !== "supabase" || !self.client) { return Promise.resolve({ local: true }); }
+      return self._sbUser().then(function (u) {
+        if (!u) { throw new Error("Log in to save favorites."); }
+        return self.client.from("favorites").select("id").eq("user_id", u.id).eq("product_id", productId).maybeSingle().then(function (ex) {
+          if (ex.error) { throw ex.error; }
+          if (ex.data) {
+            return self.client.from("favorites").delete().eq("id", ex.data.id).then(function (del) {
+              if (del.error) { throw del.error; }
+              return { favorited: false };
+            });
+          }
+          return self.client.from("favorites").insert({ user_id: u.id, product_id: productId }).then(function (ins) {
+            if (ins.error) { throw ins.error; }
+            return { favorited: true };
+          });
+        });
+      });
+    },
+    listFavoriteIds: function () {
+      var self = this;
+      if (self.mode !== "supabase" || !self.client) { return Promise.resolve([]); }
+      return self._sbUser().then(function (u) {
+        if (!u) { return []; }
+        return self.client.from("favorites").select("product_id").eq("user_id", u.id).then(function (res) {
+          if (res.error) { return []; }
+          return (res.data || []).map(function (r) { return r.product_id; });
+        });
+      });
+    },
+    mergeLocalFavorites: function (localIds) {
+      var self = this;
+      if (self.mode !== "supabase" || !self.client || !localIds.length) { return Promise.resolve(0); }
+      return self._sbUser().then(function (u) {
+        if (!u) { return 0; }
+        var rows = localIds.map(function (pid) { return { user_id: u.id, product_id: pid }; });
+        return self.client.from("favorites").upsert(rows, { onConflict: "user_id,product_id", ignoreDuplicates: true }).then(function (res) {
+          return res.error ? 0 : localIds.length;
+        });
+      });
+    },
+
+    /* ----- offers ----- */
+    makeOffer: function (productId, sellerId, amount, expiresAt) {
+      var self = this;
+      if (self.mode !== "supabase" || !self.client) { return Promise.reject(new Error("Log in to make an offer.")); }
+      return self._sbUser().then(function (u) {
+        if (!u) { throw new Error("Log in to make an offer."); }
+        return self.client.from("offers").insert({
+          product_id: productId, buyer_id: u.id, seller_id: sellerId,
+          amount: amount, status: "pending", expires_at: expiresAt
+        }).select("id").single().then(function (res) {
+          if (res.error) { throw res.error; }
+          return res.data;
+        });
+      });
+    },
+    listOffersForProduct: function (productId) {
+      var self = this;
+      if (self.mode !== "supabase" || !self.client) { return Promise.resolve([]); }
+      return self._sbUser().then(function (u) {
+        if (!u) { return []; }
+        return self.client.from("offers").select("id,amount,status,expires_at,created_at,buyer_id,seller_id,buyer:profiles!offers_buyer_id_fkey(display_name)").eq("product_id", productId).order("created_at", { ascending: false }).then(function (res) {
+          if (res.error) { return []; }
+          return res.data || [];
+        });
+      });
+    },
+    answerOffer: function (offerId, status, counterAmount) {
+      var self = this;
+      if (self.mode !== "supabase" || !self.client) { return Promise.reject(new Error("Log in first.")); }
+      var patch = { status: status };
+      if (counterAmount) { patch.amount = counterAmount; }
+      return self.client.from("offers").update(patch).eq("id", offerId).then(function (res) {
+        if (res.error) { throw res.error; }
+        return { ok: true };
+      });
+    },
+
+    /* ----- seller storefront data ----- */
+    getProfileById: function (userId) {
+      var self = this;
+      if (self.mode !== "supabase" || !self.client || !isUuid(userId)) { return Promise.resolve(null); }
+      return self.client.from("profiles").select("id,display_name,phone,address,avatar_url,created_at").eq("id", userId).maybeSingle().then(function (res) {
+        if (res.error || !res.data) { return null; }
+        return res.data;
+      });
+    },
+    sellerMessageStats: function (sellerId) {
+      /* Response stats from conversations the viewer participates in.
+         Returns { replies, totalMs } for computing "typically replies in X". */
+      var self = this;
+      if (self.mode !== "supabase" || !self.client) { return Promise.resolve(null); }
+      return self._sbUser().then(function (u) {
+        if (!u) { return null; }
+        return self.client.from("conversations").select("id").eq("seller_id", sellerId).then(function (cr) {
+          if (cr.error) { return null; }
+          var ids = (cr.data || []).map(function (c) { return c.id; });
+          if (!ids.length) { return null; }
+          return self.client.from("messages").select("conversation_id,sender_id,created_at").in("conversation_id", ids).order("created_at", { ascending: true }).limit(500).then(function (mr) {
+            if (mr.error) { return null; }
+            var byConvo = {};
+            (mr.data || []).forEach(function (m) {
+              (byConvo[m.conversation_id] = byConvo[m.conversation_id] || []).push(m);
+            });
+            var totalMs = 0, replies = 0;
+            Object.keys(byConvo).forEach(function (cid) {
+              var msgs = byConvo[cid];
+              for (var i = 0; i < msgs.length; i++) {
+                if (msgs[i].sender_id !== sellerId) {
+                  for (var j = i + 1; j < msgs.length; j++) {
+                    if (msgs[j].sender_id === sellerId) {
+                      totalMs += Date.parse(msgs[j].created_at) - Date.parse(msgs[i].created_at);
+                      replies++;
+                      break;
+                    }
+                  }
+                }
+              }
+            });
+            return replies ? { replies: replies, avgMs: Math.round(totalMs / replies) } : null;
+          });
+        });
+      });
+    },
+    markProductSold: function (productId) {
+      var self = this;
+      if (self.mode !== "supabase" || !self.client) { return Promise.resolve({ local: true }); }
+      return self.client.from("products").update({ status: "sold" }).eq("id", productId).then(function (res) {
+        /* Live RLS currently keeps status pinned to 'active'; the app
+           still marks the listing stale locally. */
+        return res.error ? { local: true, dbBlocked: true } : { ok: true };
+      }).catch(function () { return { local: true }; });
     }
   };
 
