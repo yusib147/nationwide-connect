@@ -6,6 +6,13 @@
 <title>Nationwide Connect: Buy and Sell Anything in Nigeria</title>
 <meta name="description" content="Nationwide Connect is the Nigerian marketplace. Buy and sell phones, cars, furniture, fashion and property. Chat sellers directly.">
 <meta name="theme-color" content="#0a7a3d">
+<script>
+try {
+  var _t = localStorage.getItem("nm_theme");
+  if (!_t) { _t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; }
+  document.documentElement.setAttribute("data-theme", _t);
+} catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -27,6 +34,11 @@
         <label>Password<input id="login-pass" type="password" placeholder="Your password" autocomplete="current-password"></label>
         <button type="submit" class="btn-primary">Log in</button>
       </form>
+      <div class="oauth-sep"><span>or</span></div>
+      <button id="google-btn" class="google-btn" type="button">
+        <svg class="g-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.9-.1-1.5-.3-2.3H12v4.3h6.5c-.1 1.1-.8 2.7-2.4 3.8l-.1.1 3.5 2.7.2.1c2.2-2 3.8-5 3.8-8.7z"/><path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.8-2.9c-1 .7-2.4 1.2-4.1 1.2-3.1 0-5.8-2.1-6.8-5l-.1.1-3.7 2.9v.1C3.5 21.5 7.5 24 12 24z"/><path fill="#FBBC05" d="M5.2 14.4c-.2-.7-.4-1.5-.4-2.4s.1-1.7.4-2.4l-.1-.1-3.7-2.9-.1.1C.5 8.3 0 10 0 12s.5 3.7 1.3 5.3l3.9-2.9z"/><path fill="#EA4335" d="M12 4.7c1.8 0 3 .8 3.7 1.4l3.3-3.2C17.9 1.1 15.2 0 12 0 7.5 0 3.5 2.5 1.3 6.7l3.9 2.9c1-2.9 3.6-4.9 6.8-4.9z"/></svg>
+        Continue with Google
+      </button>
       <form id="form-signup" class="auth-form" hidden>
         <label>Full name<input id="signup-name" type="text" placeholder="Your name" autocomplete="name"></label>
         <label>Email<input id="signup-email" type="email" inputmode="email" placeholder="you@example.com" autocomplete="email"></label>
@@ -117,7 +129,12 @@
         <option>Ibadan</option><option>Kano</option><option>Enugu</option>
       </select></label>
       <label>Description<textarea id="sell-desc" rows="4" placeholder="Describe the item, its state and how buyers can reach you" maxlength="600"></textarea></label>
-      <div class="photo-pick" id="sell-photo">Photo is optional. Your item shows a clean category card.</div>
+      <div class="photo-picker">
+        <label class="photo-add" for="sell-photos">+ Add photos <span id="photo-count">(0 of 9)</span></label>
+        <input id="sell-photos" type="file" accept="image/*" multiple hidden>
+        <div id="photo-thumbs" class="photo-thumbs"></div>
+        <p class="photo-hint">Up to 9 photos. The first photo shows on the card.</p>
+      </div>
       <button type="submit" class="btn-primary">Post item</button>
     </form>
   </section>
@@ -128,7 +145,7 @@
     <button data-go="category" class="nav-btn"><span class="nav-ico">▦</span><span>Categories</span></button>
     <button data-go="sell" class="nav-btn nav-sell"><span class="nav-sell-plus">+</span><span>Sell</span></button>
     <button data-go="inbox" class="nav-btn"><span class="nav-ico">✉</span><span>Inbox</span><b id="nav-badge" class="nav-badge" hidden></b></button>
-    <button data-go="me" class="nav-btn"><span class="nav-ico">☺</span><span>Me</span></button>
+    <button data-go="me" class="nav-btn"><span class="nav-ico" id="nav-me-ico">☺</span><span>Me</span></button>
   </nav>
 
   <div id="toast" class="toast" hidden></div>
