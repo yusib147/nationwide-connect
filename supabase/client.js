@@ -1,0 +1,624 @@
+/* Nationwide Connect data layer.
+   DEMO MODE (localStorage) while SUPABASE_URL / SUPABASE_ANON_KEY are empty
+   in config.js. With keys set it runs in SUPABASE MODE:
+   - categories and products are read live from Supabase (seed listings are
+     merged in so the feed stays rich)
+   - phone login first tries Supabase SMS codes; the project has no SMS
+     provider yet, so it gracefully falls back to quick demo login and the
+     app keeps working. Nothing here ever throws uncaught.
+   The app calls the same functions either way. */
+(function () {
+  "use strict";
+
+  var cfg = window.NM_CONFIG || {};
+  var live = !!(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY);
+
+  /* ---------- tiny demo password hash (demo only, not real security) ---------- */
+  function hashPw(s) {
+    var h = 0;
+    for (var i = 0; i < s.length; i++) { h = ((h * 31) + s.charCodeAt(i)) >>> 0; }
+    return "d" + h.toString(16);
+  }
+
+  function toE164(p) {
+    var d = String(p || "").replace(/\D/g, "");
+    if (d.indexOf("234") === 0) { d = d.slice(3); }
+    else if (d.charAt(0) === "0") { d = d.slice(1); }
+    return "+234" + d;
+  }
+
+  function isUuid(s) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(s || ""));
+  }
+
+  /* Supabase has no SMS provider on this project yet, so any phone OTP
+     attempt fails fast with provider-disabled. Detect that and fall back. */
+  function otpNotConfigured(err) {
+    var m = String((err && (err.message || err.msg)) || err || "").toLowerCase();
+    var code = String((err && (err.code || err.error_code)) || "").toLowerCase();
+    return /phone_provider_disabled|unsupported phone|phone provider|provider is not configured|not enabled|sms/.test(m) ||
+      code.indexOf("phone_provider_disabled") >= 0;
+  }
+
+  /* ---------- localStorage demo store ---------- */
+  var LS = {
+    get: function (k, fb) {
+      try {
+        var v = localStorage.getItem(k);
+        return v ? JSON.parse(v) : fb;
+      } catch (e) { return fb; }
+    },
+    set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+    del: function (k) { try { localStorage.removeItem(k); } catch (e) {} }
+  };
+
+  var K = {
+    users: "nm_users",
+    session: "nm_session",
+    products: "nm_products",
+    convos: "nm_convos"
+  };
+
+  /* ---------- demo auth (used in demo mode, and as fallback in
+     supabase mode while SMS login is not configured) ---------- */
+  function demoSignUp(name, phone, password) {
+    return new Promise(function (resolve, reject) {
+      var users = LS.get(K.users, []);
+      for (var i = 0; i < users.length; i++) {
+        if (users[i].phone === phone) { reject(new Error("This number already has an account. Log in instead.")); return; }
+      }
+      users.push({ name: name, phone: phone, pass: hashPw(password), at: Date.now() });
+      LS.set(K.users, users);
+      LS.set(K.session, { phone: phone });
+      resolve({ phone: phone, name: name });
+    });
+  }
+  function demoSignIn(phone, password) {
+    return new Promise(function (resolve, reject) {
+      var users = LS.get(K.users, []);
+      var found = null;
+      for (var i = 0; i < users.length; i++) {
+        if (users[i].phone === phone) { found = users[i]; }
+      }
+      if (!found || found.pass !== hashPw(password)) {
+        reject(new Error("Wrong number or password. Try again."));
+        return;
+      }
+      LS.set(K.session, { phone: phone });
+      resolve({ phone: found.phone, name: found.name });
+    });
+  }
+  function demoSignOut() { LS.del(K.session); return Promise.resolve(); }
+  function demoCurrentUser() {
+    var s = LS.get(K.session, null);
+    if (!s) { return Promise.resolve(null); }
+    var users = LS.get(K.users, []);
+    for (var i = 0; i < users.length; i++) {
+      if (users[i].phone === s.phone) {
+        return Promise.resolve({ phone: users[i].phone, name: users[i].name, demo: true });
+      }
+    }
+    return Promise.resolve(null);
+  }
+
+  /* ---------- seller auto replies (demo chat, so chat stays testable) ---------- */
+  var SELLER_LINES = [
+    "Hello, thanks for your message. The item is still available.",
+    "Yes it is available. When would you like to see it?",
+    "The price is slightly negotiable for a serious buyer.",
+    "You can come and inspect it any time. Just let me know when.",
+    "I am in town all week. Tell me what time works for you."
+  ];
+
+  function scheduleSellerReply(convoId) {
+    var convos = LS.get(K.convos, []);
+    var c = null;
+    for (var i = 0; i < convos.length; i++) {
+      if (convos[i].id === convoId) { c = convos[i]; }
+    }
+    if (!c) { return; }
+    var n = c.messages.filter(function (m) { return m.from === "buyer"; }).length;
+    var line = SELLER_LINES[Math.min(n - 1, SELLER_LINES.length - 1)];
+    setTimeout(function () {
+      var all = LS.get(K.convos, []);
+      for (var j = 0; j < all.length; j++) {
+        if (all[j].id === convoId) {
+          all[j].messages.push({ from: "seller", text: line, at: Date.now() });
+          all[j].updatedAt = Date.now();
+        }
+      }
+      LS.set(K.convos, all);
+      if (window.NM && typeof window.NM.onExternalMessage === "function") {
+        window.NM.onExternalMessage(convoId);
+      }
+    }, 2200);
+  }
+
+  /* ---------- category slug map (Supabase seeds these 7 names) ---------- */
+  var CAT_SLUG_BY_NAME = {
+    "Vehicles": "vehicles",
+    "Phones and Tablets": "phones",
+    "Electronics": "electronics",
+    "Furniture": "furniture",
+    "Fashion": "fashion",
+    "Property": "property",
+    "Services": "services"
+  };
+  var _catsCache = null;
+
+  function mapProductRow(r) {
+    var catName = (r.categories && r.categories.name) || "";
+    var prof = r.profiles || r.seller || {};
+    return {
+      id: r.id,
+      title: r.title,
+      price: Number(r.price),
+      priceSuffix: r.price_suffix || "",
+      category: CAT_SLUG_BY_NAME[catName] || "services",
+      categoryName: catName,
+      description: r.description || "",
+      location: r.location || "",
+      condition: r.condition || "Used",
+      sellerName: prof.display_name || "Seller",
+      sellerPhone: prof.phone || "",
+      sellerId: r.seller_id || null,
+      at: r.created_at ? Date.parse(r.created_at) : Date.now(),
+      live: true
+    };
+  }
+
+  function filterSeeds(filter) {
+    filter = filter || {};
+    var seeds = window.NM_SEEDS || [];
+    return seeds.filter(function (p) {
+      if (filter.category && p.category !== filter.category) { return false; }
+      if (filter.query) {
+        var q = filter.query.toLowerCase();
+        if ((p.title + " " + p.description + " " + p.location).toLowerCase().indexOf(q) < 0) { return false; }
+      }
+      if (filter.seller && p.sellerPhone !== filter.seller) { return false; }
+      return true;
+    });
+  }
+
+  function filterMapped(list, filter) {
+    filter = filter || {};
+    return list.filter(function (p) {
+      if (filter.category && p.category !== filter.category) { return false; }
+      if (filter.query) {
+        var q = filter.query.toLowerCase();
+        if ((p.title + " " + (p.description || "") + " " + (p.location || "")).toLowerCase().indexOf(q) < 0) { return false; }
+      }
+      if (filter.seller && p.sellerPhone !== filter.seller) { return false; }
+      return true;
+    });
+  }
+
+  /* ---------- public API ---------- */
+  var DB = {
+    mode: live ? "supabase" : "demo",
+    client: null,
+    authFallback: false,
+
+    init: function () {
+      var self = this;
+      return new Promise(function (resolve) {
+        if (!live) { resolve(); return; }
+        if (typeof document === "undefined") { resolve(); return; }
+        var s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+        s.onload = function () {
+          try {
+            self.client = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+          } catch (e) { self.mode = "demo"; }
+          resolve();
+        };
+        s.onerror = function () { self.mode = "demo"; resolve(); };
+        document.head.appendChild(s);
+      });
+    },
+
+    /* ----- categories: live from Supabase, cached ----- */
+    listCategories: function () {
+      var self = this;
+      if (self.mode !== "supabase" || !self.client) {
+        return Promise.resolve([]);
+      }
+      if (_catsCache) { return Promise.resolve(_catsCache); }
+      return self.client.from("categories").select("id,name,icon").order("id").then(function (res) {
+        if (res.error) { throw res.error; }
+        _catsCache = (res.data || []).map(function (c) {
+          return { id: c.id, name: c.name, icon: c.icon, slug: CAT_SLUG_BY_NAME[c.name] || "services" };
+        });
+        return _catsCache;
+      });
+    },
+
+    _catIdForSlug: function (slug) {
+      return this.listCategories().then(function (cats) {
+        for (var i = 0; i < cats.length; i++) {
+          if (cats[i].slug === slug) { return cats[i].id; }
+        }
+        return cats.length ? cats[0].id : null;
+      });
+    },
+
+    _sbUser: function () {
+      var self = this;
+      if (self.mode !== "supabase" || !self.client) { return Promise.resolve(null); }
+      return self.client.auth.getUser().then(function (res) {
+        return res.data.user || null;
+      }).catch(function () { return null; });
+    },
+
+    /* ----- auth ----- */
+    signUp: function (name, phone, password) {
+      var self = this;
+      if (self.mode === "demo" || self.authFallback) { return demoSignUp(name, phone, password); }
+      return self.client.auth.signInWithOtp({ phone: toE164(phone) }).then(function (res) {
+        if (res.error) { throw res.error; }
+        return { phone: phone, name: name, otpSent: true };
+      }).catch(function (err) {
+        if (otpNotConfigured(err)) {
+          /* No SMS provider on the project yet: quick demo login instead. */
+          self.authFallback = true;
+          return demoSignUp(name, phone, password).then(function (r) {
+            r.authNotice = "SMS login is not set up yet. You are in with quick demo login.";
+            return r;
+          });
+        }
+        throw err;
+      });
+    },
+
+    verifyOtp: function (phone, code) {
+      var self = this;
+      return self.client.auth.verifyOtp({ phone: toE164(phone), token: code, type: "sms" }).then(function (res) {
+        if (res.error) { throw res.error; }
+        var u = res.data.user;
+        /* best effort profile row */
+        if (u) {
+          self.client.from("profiles").upsert({
+            id: u.id, phone: u.phone || phone, display_name: (u.user_metadata && u.user_metadata.display_name) || phone
+          }).then(function () {}, function () {});
+        }
+        return u;
+      });
+    },
+
+    signIn: function (phone, password) {
+      var self = this;
+      if (self.mode === "demo" || self.authFallback) { return demoSignIn(phone, password); }
+      return self.client.auth.signInWithOtp({ phone: toE164(phone) }).then(function (res) {
+        if (res.error) { throw res.error; }
+        return { phone: phone, otpSent: true };
+      }).catch(function (err) {
+        if (otpNotConfigured(err)) {
+          self.authFallback = true;
+          return demoSignIn(phone, password).then(function (r) {
+            r.authNotice = "SMS login is not set up yet. You are in with quick demo login.";
+            return r;
+          });
+        }
+        throw err;
+      });
+    },
+
+    signOut: function () {
+      if (this.mode === "demo" || this.authFallback) { return demoSignOut(); }
+      return this.client.auth.signOut().catch(function () {});
+    },
+
+    currentUser: function () {
+      var self = this;
+      if (self.mode === "demo" || self.authFallback || !self.client) { return demoCurrentUser(); }
+      return self._sbUser().then(function (u) {
+        if (!u) { return demoCurrentUser(); }
+        var meta = u.user_metadata || {};
+        return {
+          id: u.id,
+          phone: u.phone || meta.phone || "",
+          name: meta.display_name || u.phone || "Member",
+          supabase: true
+        };
+      });
+    },
+
+    /* ----- products ----- */
+    listProducts: function (filter) {
+      filter = filter || {};
+      var self = this;
+      if (self.mode === "demo" || !self.client) {
+        var mine = LS.get(K.products, []);
+        var all = (window.NM_SEEDS || []).concat(mine);
+        return Promise.resolve(filterMapped(all, filter).sort(function (a, b) { return b.at - a.at; }));
+      }
+      /* Supabase mode: live rows + seed listings + anything posted in demo
+         before the switch, merged newest first. Never breaks the feed. */
+      return self.client.from("products")
+        .select("*, categories(name), profiles(display_name,phone)")
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(200)
+        .then(function (res) {
+          if (res.error) { throw res.error; }
+          return (res.data || []).map(mapProductRow);
+        })
+        .then(function (rows) {
+          var mine = LS.get(K.products, []);
+          var merged = filterMapped(rows, filter)
+            .concat(filterMapped(mine, filter))
+            .concat(filterSeeds(filter));
+          merged.sort(function (a, b) { return b.at - a.at; });
+          return merged;
+        })
+        .catch(function () {
+          /* Supabase unreachable: seeds keep the feed alive. */
+          return filterSeeds(filter).sort(function (a, b) { return b.at - a.at; });
+        });
+    },
+
+    createProduct: function (data) {
+      var self = this;
+      if (self.mode === "demo" || !self.client) {
+        return demoCurrentUser().then(function (u) {
+          if (!u) { throw new Error("Log in to post an item."); }
+          var mine = LS.get(K.products, []);
+          var p = {
+            id: "u" + Date.now(),
+            title: data.title,
+            price: Number(data.price),
+            priceSuffix: data.priceSuffix || "",
+            category: data.category,
+            description: data.description,
+            location: data.location || "",
+            condition: data.condition || "Used",
+            sellerName: u.name,
+            sellerPhone: u.phone,
+            at: Date.now()
+          };
+          mine.push(p);
+          LS.set(K.products, mine);
+          return p;
+        });
+      }
+      /* Supabase mode: needs a real Supabase session for the RLS policy. */
+      return self._sbUser().then(function (u) {
+        if (!u) { throw new Error("Live posting needs SMS login. It is not set up yet."); }
+        return self._catIdForSlug(data.category).then(function (catId) {
+          return self.client.from("products").insert({
+            seller_id: u.id,
+            title: data.title,
+            price: Number(data.price),
+            price_suffix: data.priceSuffix || "",
+            category_id: catId,
+            description: data.description,
+            location: data.location || "",
+            condition: data.condition || "Used",
+            status: "active"
+          }).select("*, categories(name), profiles(display_name,phone)").single();
+        }).then(function (res) {
+          if (res.error) { throw res.error; }
+          return mapProductRow(res.data);
+        });
+      });
+    },
+
+    /* ----- conversations ----- */
+    _localConvos: function () {
+      var self = this;
+      return demoCurrentUser().then(function (u) {
+        if (!u) { return []; }
+        return LS.get(K.convos, []).filter(function (c) {
+          return c.buyerPhone === u.phone || c.sellerPhone === u.phone;
+        }).sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+      });
+    },
+
+    openConversation: function (productId) {
+      var self = this;
+      /* Local chat engine for seed items or when there is no Supabase session. */
+      function localOpen() {
+        return demoCurrentUser().then(function (u) {
+          if (!u) { throw new Error("Log in to chat with sellers."); }
+          var prod = (window.NM_SEEDS || []).concat(LS.get(K.products, [])).filter(function (p) { return String(p.id) === String(productId); })[0];
+          if (!prod) { throw new Error("Item not found."); }
+          if (prod.sellerPhone && prod.sellerPhone === u.phone) { throw new Error("This is your own item."); }
+          var convos = LS.get(K.convos, []);
+          for (var i = 0; i < convos.length; i++) {
+            if (String(convos[i].productId) === String(productId) && convos[i].buyerPhone === u.phone) {
+              return convos[i].id;
+            }
+          }
+          var c = {
+            id: "c" + Date.now(),
+            productId: productId,
+            productTitle: prod.title,
+            productPrice: prod.price,
+            productCat: prod.category,
+            sellerName: prod.sellerName,
+            sellerPhone: prod.sellerPhone,
+            buyerPhone: u.phone,
+            buyerName: u.name,
+            messages: [],
+            updatedAt: Date.now()
+          };
+          convos.push(c);
+          LS.set(K.convos, convos);
+          return c.id;
+        });
+      }
+      if (self.mode === "demo" || !self.client || !isUuid(productId)) { return localOpen(); }
+      return self._sbUser().then(function (u) {
+        if (!u) { return localOpen(); }
+        return self.client.from("products").select("id,seller_id").eq("id", productId).maybeSingle().then(function (pr) {
+          if (pr.error) { throw pr.error; }
+          if (!pr.data) { return localOpen(); }
+          if (pr.data.seller_id === u.id) { throw new Error("This is your own item."); }
+          return self.client.from("conversations").select("id")
+            .eq("product_id", productId).eq("buyer_id", u.id).maybeSingle().then(function (ex) {
+              if (ex.error) { throw ex.error; }
+              if (ex.data) { return ex.data.id; }
+              return self.client.from("conversations").insert({
+                product_id: productId, buyer_id: u.id, seller_id: pr.data.seller_id
+              }).select("id").single().then(function (ins) {
+                if (ins.error) { throw ins.error; }
+                return ins.data.id;
+              });
+            });
+        });
+      });
+    },
+
+    listConversations: function () {
+      var self = this;
+      var localP = self._localConvos();
+      if (self.mode === "demo" || !self.client) { return localP; }
+      return self._sbUser().then(function (u) {
+        if (!u) { return localP; }
+        return self.client.from("conversations")
+          .select("id,product_id,buyer_id,seller_id,updated_at," +
+            "products!inner(title,price,categories(name))," +
+            "buyer:profiles!conversations_buyer_id_fkey(display_name,phone)," +
+            "seller:profiles!conversations_seller_id_fkey(display_name,phone)")
+          .or("buyer_id.eq." + u.id + ",seller_id.eq." + u.id)
+          .order("updated_at", { ascending: false })
+          .then(function (res) {
+            if (res.error) { throw res.error; }
+            var ids = (res.data || []).map(function (c) { return c.id; });
+            var msgP = ids.length ? self.client.from("messages")
+              .select("conversation_id,body,created_at,sender_id")
+              .in("conversation_id", ids).order("created_at", { ascending: false })
+              : Promise.resolve({ data: [] });
+            return msgP.then(function (mr) {
+              var lastBy = {};
+              (mr.data || []).forEach(function (m) {
+                if (!lastBy[m.conversation_id]) {
+                  lastBy[m.conversation_id] = { text: m.body, at: Date.parse(m.created_at) };
+                }
+              });
+              var live = (res.data || []).map(function (c) {
+                var prod = c.products || {};
+                var other = (c.buyer_id === u.id) ? (c.seller || {}) : (c.buyer || {});
+                var last = lastBy[c.id];
+                return {
+                  id: c.id,
+                  productId: c.product_id,
+                  productTitle: prod.title || "",
+                  productPrice: Number(prod.price || 0),
+                  productCat: CAT_SLUG_BY_NAME[(prod.categories || {}).name] || "services",
+                  sellerName: (c.seller || {}).display_name || "Seller",
+                  sellerPhone: (c.seller || {}).phone || "",
+                  buyerPhone: (c.buyer || {}).phone || "",
+                  buyerName: (c.buyer || {}).display_name || "",
+                  otherName: other.display_name || "Member",
+                  messages: last ? [{ from: "other", text: last.text, at: last.at }] : [],
+                  updatedAt: Date.parse(c.updated_at),
+                  live: true
+                };
+              });
+              return localP.then(function (local) {
+                return live.concat(local).sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+              });
+            });
+          });
+      }).catch(function () { return localP; });
+    },
+
+    getConversation: function (id) {
+      var self = this;
+      function localGet() {
+        try {
+          var all = LS.get(K.convos, []);
+          for (var i = 0; i < all.length; i++) {
+            if (String(all[i].id) === String(id)) { return Promise.resolve(all[i]); }
+          }
+        } catch (e) {}
+        return Promise.resolve(null);
+      }
+      if (self.mode === "demo" || !self.client || !isUuid(id)) { return localGet(); }
+      return self._sbUser().then(function (u) {
+        if (!u) { return localGet(); }
+        return self.client.from("conversations")
+          .select("id,product_id,buyer_id,seller_id," +
+            "products!inner(title,price,categories(name))," +
+            "buyer:profiles!conversations_buyer_id_fkey(display_name,phone)," +
+            "seller:profiles!conversations_seller_id_fkey(display_name,phone)")
+          .eq("id", id).maybeSingle().then(function (res) {
+            if (res.error) { throw res.error; }
+            if (!res.data) { return localGet(); }
+            var c = res.data;
+            return self.client.from("messages").select("sender_id,body,created_at")
+              .eq("conversation_id", id).order("created_at", { ascending: true })
+              .then(function (mr) {
+                if (mr.error) { throw mr.error; }
+                var prod = c.products || {};
+                return {
+                  id: c.id,
+                  productId: c.product_id,
+                  productTitle: prod.title || "",
+                  productPrice: Number(prod.price || 0),
+                  productCat: CAT_SLUG_BY_NAME[(prod.categories || {}).name] || "services",
+                  sellerName: (c.seller || {}).display_name || "Seller",
+                  sellerPhone: (c.seller || {}).phone || "",
+                  buyerPhone: (c.buyer || {}).phone || "",
+                  buyerName: (c.buyer || {}).display_name || "",
+                  messages: (mr.data || []).map(function (m) {
+                    return {
+                      from: m.sender_id === u.id ? "buyer" : "seller",
+                      text: m.body,
+                      at: Date.parse(m.created_at)
+                    };
+                  }),
+                  updatedAt: Date.now(),
+                  live: true
+                };
+              });
+          });
+      }).catch(function () { return localGet(); });
+    },
+
+    sendMessage: function (convoId, text) {
+      var self = this;
+      function localSend() {
+        return demoCurrentUser().then(function (u) {
+          var convos = LS.get(K.convos, []);
+          var found = false;
+          for (var i = 0; i < convos.length; i++) {
+            if (String(convos[i].id) === String(convoId)) {
+              var who = (convos[i].buyerPhone === u.phone) ? "buyer" : "seller";
+              convos[i].messages.push({ from: who, text: text, at: Date.now() });
+              convos[i].updatedAt = Date.now();
+              found = true;
+              if (who === "buyer") { scheduleSellerReply(convos[i].id); }
+            }
+          }
+          if (!found) { throw new Error("Chat not found."); }
+          LS.set(K.convos, convos);
+        });
+      }
+      if (self.mode === "demo" || !self.client || !isUuid(convoId)) { return localSend(); }
+      return self._sbUser().then(function (u) {
+        if (!u) { return localSend(); }
+        return self.client.from("messages").insert({
+          conversation_id: convoId, sender_id: u.id, body: text
+        }).then(function (res) {
+          if (res.error) { throw res.error; }
+        });
+      });
+    }
+  };
+
+  /* internals exposed for automated tests */
+  DB._test = {
+    mapProductRow: mapProductRow,
+    filterSeeds: filterSeeds,
+    filterMapped: filterMapped,
+    otpNotConfigured: otpNotConfigured,
+    toE164: toE164,
+    isUuid: isUuid,
+    CAT_SLUG_BY_NAME: CAT_SLUG_BY_NAME
+  };
+
+  window.NM_DB = DB;
+})();

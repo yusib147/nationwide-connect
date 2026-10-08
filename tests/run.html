@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TESTS:RUNNING</title>
+<link rel="stylesheet" href="../styles.css">
+<style>#test-output{position:fixed;top:0;left:0;right:0;background:#111;color:#0f0;font:12px monospace;z-index:9999;max-height:45vh;overflow:auto;padding:8px;white-space:pre-wrap;}</style>
+</head>
+<body>
+<div id="test-output">running...</div>
+
+<div id="app">
+
+  <!-- AUTH -->
+  <section id="screen-auth" class="screen">
+    <div class="auth-wrap">
+      <div class="auth-logo">NC</div>
+      <h1 class="auth-title">Nationwide Connect</h1>
+      <p class="auth-sub">Buy and sell anything, right from your phone.</p>
+      <div class="auth-tabs">
+        <button id="tab-login" class="auth-tab active">Log in</button>
+        <button id="tab-signup" class="auth-tab">Sign up</button>
+      </div>
+      <div id="auth-error" class="auth-error" hidden></div>
+      <form id="form-login" class="auth-form">
+        <label>Phone number<input id="login-phone" type="tel" inputmode="tel" placeholder="0803 123 4567" autocomplete="tel"></label>
+        <label>Password<input id="login-pass" type="password" placeholder="Your password" autocomplete="current-password"></label>
+        <button type="submit" class="btn-primary">Log in</button>
+      </form>
+      <form id="form-signup" class="auth-form" hidden>
+        <label>Full name<input id="signup-name" type="text" placeholder="Your name" autocomplete="name"></label>
+        <label>Phone number<input id="signup-phone" type="tel" inputmode="tel" placeholder="0803 123 4567" autocomplete="tel"></label>
+        <label>Password<input id="signup-pass" type="password" placeholder="Choose a password" autocomplete="new-password"></label>
+        <button type="submit" class="btn-primary">Create account</button>
+      </form>
+      <form id="form-otp" class="auth-form" hidden>
+        <p class="auth-sub">We sent a code to <b id="otp-phone-label"></b>. Type it below.</p>
+        <label>Code<input id="otp-code" type="text" inputmode="numeric" placeholder="6 digit code" maxlength="6"></label>
+        <button type="submit" class="btn-primary">Verify</button>
+      </form>
+      <p class="auth-note">Demo mode: accounts live on this device only, until Supabase is linked.</p>
+    </div>
+  </section>
+
+  <!-- HOME -->
+  <section id="screen-home" class="screen">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">NC</span><span class="brand-name">Nationwide Connect</span></div>
+    </header>
+    <div class="search-row">
+      <input id="home-search" type="search" placeholder="Search products" aria-label="Search products">
+    </div>
+    <div id="home-chips" class="chips"></div>
+    <div id="home-grid" class="grid"></div>
+    <div id="home-empty" class="empty" hidden>No items match your search yet. Try another word.</div>
+  </section>
+
+  <!-- CATEGORY -->
+  <section id="screen-category" class="screen">
+    <header class="topbar"><h2 class="page-title">Categories</h2></header>
+    <div id="cat-list" class="cat-list"></div>
+    <div id="cat-results-head" class="results-head" hidden>
+      <button id="cat-back" class="link-btn">All categories</button>
+      <h3 id="cat-results-title"></h3>
+    </div>
+    <div id="cat-grid" class="grid"></div>
+  </section>
+
+  <!-- DETAIL -->
+  <section id="screen-detail" class="screen">
+    <header class="topbar nav-bar">
+      <button id="detail-back" class="icon-btn" aria-label="Back">‹</button>
+      <h2 class="page-title">Item</h2>
+    </header>
+    <div id="detail-body"></div>
+  </section>
+
+  <!-- INBOX -->
+  <section id="screen-inbox" class="screen">
+    <header class="topbar"><h2 class="page-title">Inbox</h2></header>
+    <div id="inbox-list"></div>
+    <div id="inbox-empty" class="empty" hidden>No chats yet. Open any item and tap Chat seller.</div>
+  </section>
+
+  <!-- THREAD -->
+  <section id="screen-thread" class="screen">
+    <header class="topbar nav-bar">
+      <button id="thread-back" class="icon-btn" aria-label="Back">‹</button>
+      <div class="thread-head">
+        <h2 id="thread-name" class="page-title"></h2>
+        <p id="thread-sub" class="thread-sub"></p>
+      </div>
+    </header>
+    <div id="thread-msgs" class="thread-msgs"></div>
+    <form id="thread-form" class="thread-form">
+      <input id="thread-input" type="text" placeholder="Type a message" autocomplete="off">
+      <button type="submit" class="btn-primary">Send</button>
+    </form>
+  </section>
+
+  <!-- ME -->
+  <section id="screen-me" class="screen">
+    <header class="topbar"><h2 class="page-title">Me</h2></header>
+    <div id="me-body"></div>
+  </section>
+
+  <!-- SELL -->
+  <section id="screen-sell" class="screen">
+    <header class="topbar nav-bar">
+      <button id="sell-back" class="icon-btn" aria-label="Back">‹</button>
+      <h2 class="page-title">Sell an item</h2>
+    </header>
+    <form id="sell-form" class="sell-form">
+      <div id="sell-error" class="auth-error" hidden></div>
+      <label>Title<input id="sell-title" type="text" placeholder="What are you selling" maxlength="80"></label>
+      <label>Price in naira<input id="sell-price" type="number" inputmode="numeric" placeholder="50000" min="1"></label>
+      <label>Category<select id="sell-category"></select></label>
+      <label>Condition<select id="sell-condition"><option>New</option><option>Used</option></select></label>
+      <label>Location<select id="sell-location">
+        <option>Lagos</option><option>Abuja</option><option>Port Harcourt</option>
+        <option>Ibadan</option><option>Kano</option><option>Enugu</option>
+      </select></label>
+      <label>Description<textarea id="sell-desc" rows="4" placeholder="Describe the item, its state and how buyers can reach you" maxlength="600"></textarea></label>
+      <div class="photo-pick" id="sell-photo">Photo is optional. Your item shows a clean category card.</div>
+      <button type="submit" class="btn-primary">Post item</button>
+    </form>
+  </section>
+
+  <!-- BOTTOM NAV -->
+  <nav id="bottomnav">
+    <button data-go="home" class="nav-btn"><span class="nav-ico">⌂</span><span>Home</span></button>
+    <button data-go="category" class="nav-btn"><span class="nav-ico">▦</span><span>Categories</span></button>
+    <button data-go="sell" class="nav-btn nav-sell"><span class="nav-sell-plus">+</span><span>Sell</span></button>
+    <button data-go="inbox" class="nav-btn"><span class="nav-ico">✉</span><span>Inbox</span><b id="nav-badge" class="nav-badge" hidden></b></button>
+    <button data-go="me" class="nav-btn"><span class="nav-ico">☺</span><span>Me</span></button>
+  </nav>
+
+  <div id="toast" class="toast" hidden></div>
+</div>
+<script src="../config.js"></script>
+<script src="../supabase/client.js"></script>
+<script src="../app.js"></script>
+
+<script src="test.js"></script>
+</body>
+</html>
