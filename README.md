@@ -1,9 +1,27 @@
-# Nationwide Connect
+# Nationwide Media Connect
 
-A Jiji style buy and sell marketplace for Nigeria. Mobile first web app:
-sign up with phone number, browse items, chat sellers, post your own items.
+A Jiji-style buy and sell marketplace for Nigeria. Mobile-first premium web app:
+sign up with email or phone number, browse items, chat sellers, make offers, post your own items.
 
-Live demo: https://naija-market-skepterforge1471-8639s-projects.vercel.app/
+Live: https://nationwide-connect-demo1-skepterforge1471-8639s-projects.vercel.app/
+
+## Brand
+
+Deep navy + red-orange + cyan glow identity, built around the official logo
+(`assets/logo-main.jpg`). Site title: **Nationwide Media Connect**.
+
+## Premium UI
+
+- Branded splash screen with logo and shimmer progress bar
+- Auto-rotating hero carousel (3 slides, dot indicators)
+- Infinite trust ticker marquee
+- Flash promo strip with live countdown timer
+- Capsule search bar (Airbnb-style)
+- Liquid-glass floating bottom navigation
+- Staggered card entrances, shimmer skeleton loaders
+- Custom SVG category icons (7) and empty-state illustrations (3)
+- Noise/grain texture overlays on brand surfaces
+- Full SEO: Open Graph, Twitter cards, JSON-LD, PWA manifest
 
 ## Run it
 
@@ -16,57 +34,37 @@ python3 -m http.server 8000
 
 Then open `http://localhost:8000`.
 
-## Demo mode (default)
-
-With empty keys in `config.js` the app runs fully on your device:
-
-- Accounts live in `localStorage` (phone + password)
-- Your posted items live in `localStorage` and show on Home instantly
-- The seller auto replies in chat so the whole flow is testable
-
-Demo mode never touches the network and never blocks on missing keys.
-
-## Go live with Supabase
+## Supabase backend
 
 1. Create a free project at [supabase.com](https://supabase.com).
 2. Open the SQL editor and run `supabase/schema.sql` from this repo.
    It creates `profiles`, `categories`, `products`, `conversations`,
-   `messages` with row level security.
-3. For real SMS codes: Supabase Dashboard, Authentication, Sign In / Up,
-   enable Phone, add your Twilio credentials (Twilio trial works for tests).
-4. Copy the project URL and anon key (Project Settings, API).
-5. Paste them into `config.js`:
+   `messages`, `favorites`, `reports`, `offers`, `saved_searches`
+   with row level security, plus the `email_for_phone()` RPC.
+3. Copy the project URL and anon key (Project Settings, API).
+4. Paste them into `config.js`.
+5. Deploy with `python3 deploy.py` (uploads to Vercel).
 
-```js
-SUPABASE_URL: "https://xyzcompany.supabase.co",
-SUPABASE_ANON_KEY: "your anon key"
-```
-
-6. Redeploy. The app switches to Supabase automatically.
-   Auth becomes phone number + SMS code. Products, chats and profiles
-   move to the database. Demo accounts stay on each device only.
+Auth: email+password AND phone+password. Password reset via email link.
+WhatsApp number verification flow for gold seller tier.
 
 ## Project layout
 
-- `index.html` — app shell and all screens
-- `styles.css` — mobile first styles
-- `app.js` — screens, router, seed listings
-- `config.js` — Supabase keys (empty = demo mode)
-- `supabase/client.js` — data layer, Supabase or demo store
+- `index.html` — app shell, splash, hero, ticker, all screens, SEO
+- `styles.css` — premium design system (navy/orange/cyan)
+- `app.js` — screens, router, carousel, ticker, countdown, features
+- `config.js` — Supabase keys
+- `manifest.json` — PWA manifest
+- `assets/` — official logo, app icons, OG cover, SVG icons
+- `supabase/client.js` — data layer
 - `supabase/schema.sql` — database tables and RLS policies
-- `tests/run.html` — automated quality gate (see below)
+- `deploy.py` — Vercel deployment script
+- `research/ux-ideas.md` — 20 implemented UX ideas
+- `tests/` — automated quality gate
 
-## Quality gate
+## Deploy
 
 ```bash
 cd ~/workspace/naija-market
-python3 -m http.server 8000 &
-google-chrome --headless --disable-gpu --no-sandbox \
-  --window-size=390,844 --virtual-time-budget=20000 \
-  --dump-dom "file://$HOME/workspace/naija-market/tests/run.html" \
-  | grep -o "TESTS:[A-Z]*:[0-9]*/[0-9]*"
+python3 deploy.py
 ```
-
-Every check must pass before a deploy: sign up, log out, log in,
-post item, item on Home, open detail, send chat, inbox thread,
-every category browses, 390px layout clean, zero console errors.
