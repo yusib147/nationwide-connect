@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160">
+  <defs>
+    <linearGradient id="cg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#12a15a" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#0a7a3d" stop-opacity=".06"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="78" r="62" fill="url(#cg)"/>
+  <circle cx="100" cy="78" r="62" fill="none" stroke="#0a7a3d" stroke-opacity=".15" stroke-width="2" stroke-dasharray="6 8"/>
+  <!-- chat bubbles -->
+  <rect x="58" y="48" width="64" height="40" rx="14" fill="#ffffff" stroke="#0a7a3d" stroke-width="4"/>
+  <path d="M74 88 l-4 14 16 -10 z" fill="#ffffff" stroke="#0a7a3d" stroke-width="4" stroke-linejoin="round"/>
+  <circle cx="76" cy="68" r="4" fill="#0a7a3d" opacity=".55"/>
+  <circle cx="90" cy="68" r="4" fill="#0a7a3d" opacity=".55"/>
+  <circle cx="104" cy="68" r="4" fill="#e9a100"/>
+  <rect x="104" y="92" width="44" height="30" rx="12" fill="#e9a100" opacity=".85"/>
+  <path d="M132 122 l4 10 -13 -8 z" fill="#e9a100" opacity=".85"/>
+  <path d="M140 40 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3 z" fill="#e9a100"/>
+</svg>
