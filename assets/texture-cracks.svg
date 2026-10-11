@@ -1,1 +1,29 @@
-PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MDAiIGhlaWdodD0iNDAwIiB2aWV3Qm94PSIwIDAgNjAwIDQwMCI+CiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj4KICAgIDxnIHN0cm9rZT0iIzAwYzhmZiIgc3Ryb2tlLXdpZHRoPSIxLjIiIG9wYWNpdHk9IjAuNSI+CiAgICAgIDxwb2x5bGluZSBwb2ludHM9IjQwLDggOTIsNjggNzIsMTQwIDEzMiwyMDIgMTEyLDI4MiAxNzIsMzQyIi8+CiAgICAgIDxwb2x5bGluZSBwb2ludHM9IjkyLDY4IDE1Miw1OCAyMTIsOTQiLz4KICAgICAgPHBvbHlsaW5lIHBvaW50cz0iNzIsMTQwIDIyLDE2OCAtOCwyMzIiLz4KICAgICAgPHBvbHlsaW5lIHBvaW50cz0iMTMyLDIwMiAyMDIsMjEyIDI1MiwyNjIiLz4KICAgICAgPHBvbHlsaW5lIHBvaW50cz0iMTEyLDI4MiA2MiwzMTIgNDIsMzcyIi8+CiAgICAgIDxwb2x5bGluZSBwb2ludHM9IjI1MiwyNjIgMzAwLDI1MCAzNDAsMjkwIi8+CiAgICA8L2c+CiAgICA8ZyBzdHJva2U9IiNmZjdhMWYiIHN0cm9rZS13aWR0aD0iMS4yIiBvcGFjaXR5PSIwLjQyIj4KICAgICAgPHBvbHlsaW5lIHBvaW50cz0iNTYyLDE4IDUxMiw4OCA1MzIsMTYwIDQ3MiwyMjIgNDkyLDMwMiA0MzIsMzYyIi8+CiAgICAgIDxwb2x5bGluZSBwb2ludHM9IjUxMiw4OCA0NTIsNzggNDAyLDExNCIvPgogICAgICA8cG9seWxpbmUgcG9pbnRzPSI1MzIsMTYwIDU5MiwxOTIgNjEyLDI1MiIvPgogICAgICA8cG9seWxpbmUgcG9pbnRzPSI0NzIsMjIyIDQxMiwyMzIgMzcyLDI4MiIvPgogICAgICA8cG9seWxpbmUgcG9pbnRzPSIzNzIsMjgyIDMzMCwyNzAgMzAwLDMxMCIvPgogICAgPC9nPgogICAgPGcgc3Ryb2tlPSIjN2RiNGZmIiBzdHJva2Utd2lkdGg9IjAuOCIgb3BhY2l0eT0iMC4zIj4KICAgICAgPHBvbHlsaW5lIHBvaW50cz0iMjUwLDM4IDMwMiwxMDggMjgyLDE4MCAzNDIsMjQyIi8+CiAgICAgIDxwb2x5bGluZSBwb2ludHM9IjMwMiwxMDggMzYyLDk4IDQxMiwxMzgiLz4KICAgICAgPHBvbHlsaW5lIHBvaW50cz0iMjgyLDE4MCAyMzIsMjA4IDIxMiwyNjgiLz4KICAgICAgPHBvbHlsaW5lIHBvaW50cz0iMzQyLDI0MiAzOTAsMjMyIDQyMCwyNzIiLz4KICAgIDwvZz4KICAgIDxnIHN0cm9rZT0iI2ZmZDE2NiIgc3Ryb2tlLXdpZHRoPSIwLjciIG9wYWNpdHk9IjAuMjIiPgogICAgICA8cG9seWxpbmUgcG9pbnRzPSIxNTAsMzMwIDIwMCwzMDAgMjQwLDMzMCAyOTAsMzA1Ii8+CiAgICAgIDxwb2x5bGluZSBwb2ludHM9IjM4MCw2MCA0MjAsOTAgNDYwLDcwIi8+CiAgICA8L2c+CiAgPC9nPgo8L3N2Zz4K
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+  <g fill="none" stroke-linecap="round">
+    <g stroke="#00c8ff" stroke-width="1.2" opacity="0.5">
+      <polyline points="40,8 92,68 72,140 132,202 112,282 172,342"/>
+      <polyline points="92,68 152,58 212,94"/>
+      <polyline points="72,140 22,168 -8,232"/>
+      <polyline points="132,202 202,212 252,262"/>
+      <polyline points="112,282 62,312 42,372"/>
+      <polyline points="252,262 300,250 340,290"/>
+    </g>
+    <g stroke="#ff7a1f" stroke-width="1.2" opacity="0.42">
+      <polyline points="562,18 512,88 532,160 472,222 492,302 432,362"/>
+      <polyline points="512,88 452,78 402,114"/>
+      <polyline points="532,160 592,192 612,252"/>
+      <polyline points="472,222 412,232 372,282"/>
+      <polyline points="372,282 330,270 300,310"/>
+    </g>
+    <g stroke="#7db4ff" stroke-width="0.8" opacity="0.3">
+      <polyline points="250,38 302,108 282,180 342,242"/>
+      <polyline points="302,108 362,98 412,138"/>
+      <polyline points="282,180 232,208 212,268"/>
+      <polyline points="342,242 390,232 420,272"/>
+    </g>
+    <g stroke="#ffd166" stroke-width="0.7" opacity="0.22">
+      <polyline points="150,330 200,300 240,330 290,305"/>
+      <polyline points="380,60 420,90 460,70"/>
+    </g>
+  </g>
+</svg>
