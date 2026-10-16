@@ -83,7 +83,10 @@ function fulfill(p) {
   // purpose "banner": nothing automatic — the paid row is the admin's fulfilment queue.
   return work.then(function () {
     return sb("payments?id=eq." + p.id, { method: "PATCH", body: JSON.stringify({ status: "paid", paid_at: now.toISOString(), activated_at: now.toISOString() }) });
-  }).then(function () { return true; });
+  }).then(function () {
+    if (p.purpose === "premium") { return referralReward(p).then(function () { return true; }, function () { return true; }); }
+    return true;
+  });
 }
 
 // Verify a reference with Paystack and fulfil if genuinely paid. Returns the payment row.
@@ -95,7 +98,13 @@ function verifyAndFulfill(reference) {
     return paystack("/transaction/verify/" + encodeURIComponent(reference), {}).then(function (v) {
       var d = v && v.data;
       if (d && d.status === "success" && d.amount === p.amount_kobo && d.currency === "NGN") {
-        return fulfill(p).then(function () { return Object.assign({}, p, { status: "paid" }); });
+        var au = d.authorization || {};
+        var inst = { auth: au.authorization_code || null, bin: au.bin || null, last4: au.last4 || null, bank: au.bank || null, channel: d.channel || null };
+        var meta2 = Object.assign({}, (p.meta && typeof p.meta === "object") ? p.meta : {}, { instrument: inst, payer_email: (d.customer && d.customer.email) || null });
+        var p2 = Object.assign({}, p, { meta: meta2 });
+        return sb("payments?id=eq." + p.id, { method: "PATCH", body: JSON.stringify({ meta: meta2 }) }).catch(function () { return null; }).then(function () {
+          return fulfill(p2).then(function () { return Object.assign({}, p2, { status: "paid" }); });
+        });
       }
       if (d && (d.status === "failed" || d.status === "abandoned")) {
         return sb("payments?id=eq." + p.id, { method: "PATCH", body: JSON.stringify({ status: d.status }) }).then(function () { return Object.assign({}, p, { status: d.status }); });
@@ -103,6 +112,92 @@ function verifyAndFulfill(reference) {
       return p;
     });
   });
+}
+
+
+// ---------------- Refer & Earn ----------------
+// Rewards are created ONLY here, inside fulfilment of a verified external
+// payment. Splits (Ibrahim's spec, kobo): a N1,000 premium payment pays the
+// referrer N250 cash + N250 service credit; N5,000 pays N750 cash + N250
+// credit. One reward per referred account EVER; unique payment_ref and
+// ledger idempotency keys make replays harmless. Any fraud signal holds the
+// reward (status "held", no ledger entries) for admin review instead of
+// crediting it. Wallet-paid purchases never create rewards (meta.method).
+var REWARD_BY_AMOUNT = { 100000: { cash: 25000, credit: 25000 }, 500000: { cash: 75000, credit: 25000 } };
+function canonEmail(e) {
+  if (!e) return "";
+  var str = String(e).toLowerCase().trim();
+  var at = str.lastIndexOf("@"); if (at < 0) return str;
+  var local = str.slice(0, at), dom = str.slice(at + 1);
+  if (dom === "gmail.com" || dom === "googlemail.com") { local = local.split("+")[0].replace(/\./g, ""); dom = "gmail.com"; }
+  else { local = local.split("+")[0]; }
+  return local + "@" + dom;
+}
+function authUserEmail(uid) {
+  return fetch(SUPABASE_URL + "/auth/v1/admin/users/" + uid, { headers: { apikey: SERVICE, Authorization: "Bearer " + SERVICE } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (u) { return (u && u.email) || ""; })
+    .catch(function () { return ""; });
+}
+function instrumentKey(meta) {
+  var i = meta && meta.instrument;
+  if (!i) return null;
+  return i.auth || ((i.bin || "") + ":" + (i.last4 || "")) || null;
+}
+function referralReward(p) {
+  var rw = REWARD_BY_AMOUNT[p.amount_kobo];
+  if (!rw) return Promise.resolve();
+  if (p.meta && p.meta.method === "wallet") return Promise.resolve();
+  return sb("profiles?select=id,referred_by,referral_code_used,phone,created_at&id=eq." + p.user_id, {}).then(function (rows) {
+    var payer = rows && rows[0];
+    if (!payer || !payer.referred_by) return null;
+    var referrerId = payer.referred_by;
+    return sb("referral_rewards?select=id&referred_user_id=eq." + p.user_id, {}).then(function (existing) {
+      if (existing && existing.length) return null;
+      var flags = [];
+      var checks = [];
+      if (referrerId === p.user_id) flags.push("self_referral");
+      checks.push(Promise.all([
+        sb("device_records?select=fingerprint&user_id=eq." + referrerId + "&limit=50", {}).catch(function () { return []; }),
+        sb("device_records?select=fingerprint&user_id=eq." + p.user_id + "&limit=50", {}).catch(function () { return []; })
+      ]).then(function (both) {
+        var mine = {};
+        (both[0] || []).forEach(function (d) { mine[d.fingerprint] = 1; });
+        if ((both[1] || []).some(function (d) { return mine[d.fingerprint]; })) flags.push("shared_device");
+      }));
+      checks.push(sb("profiles?select=phone&id=eq." + referrerId, {}).then(function (rr) {
+        var rp = rr && rr[0] && rr[0].phone;
+        if (rp && payer.phone && String(rp).replace(/\D/g, "") === String(payer.phone).replace(/\D/g, "")) flags.push("shared_phone");
+      }).catch(function () {}));
+      var inst = instrumentKey(p.meta);
+      if (inst) {
+        checks.push(sb("payments?select=id,user_id,meta&status=eq.paid&limit=300", {}).then(function (all) {
+          (all || []).forEach(function (q) {
+            if (q.id === p.id || q.user_id === p.user_id) return;
+            if (instrumentKey(q.meta) === inst) flags.push("shared_payment_instrument");
+          });
+        }).catch(function () {}));
+      }
+      checks.push(Promise.all([authUserEmail(referrerId), authUserEmail(p.user_id)]).then(function (em) {
+        if (em[0] && em[1] && canonEmail(em[0]) === canonEmail(em[1])) flags.push("shared_email_identity");
+      }));
+      checks.push(sb("referral_rewards?select=id&referrer_id=eq." + referrerId + "&created_at=gt." + new Date(Date.now() - 864e5).toISOString(), {}).then(function (recent) {
+        if (recent && recent.length >= 5) flags.push("velocity_hold");
+      }).catch(function () {}));
+      return Promise.all(checks).then(function () {
+        var held = flags.length > 0;
+        var row = { referrer_id: referrerId, referred_user_id: p.user_id, payment_ref: p.reference, plan: p.plan, amount_paid_kobo: p.amount_kobo, cash_kobo: rw.cash, credit_kobo: rw.credit, status: held ? "held" : "credited", fraud_flags: flags };
+        return sb("referral_rewards", { method: "POST", body: JSON.stringify([row]) }).then(function () {
+          if (held) return null;
+          var entries = [
+            { user_id: referrerId, kind: "cash", amount_kobo: rw.cash, reason: "referral_reward", ref: p.reference, idempotency_key: "ref:" + p.reference + ":cash" },
+            { user_id: referrerId, kind: "credit", amount_kobo: rw.credit, reason: "referral_reward", ref: p.reference, idempotency_key: "ref:" + p.reference + ":credit" }
+          ];
+          return sb("wallet_ledger", { method: "POST", body: JSON.stringify(entries) }).catch(function () { return null; });
+        }).catch(function () { return null; });
+      });
+    });
+  }).catch(function () { return null; });
 }
 
 module.exports = { PLANS: PLANS, sb: sb, getUser: getUser, paystack: paystack, fulfill: fulfill, verifyAndFulfill: verifyAndFulfill, SITE: SITE, hasKeys: function () { return !!PAYSTACK_SECRET && !!SERVICE; } };
