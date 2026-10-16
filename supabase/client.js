@@ -642,7 +642,9 @@
               if (ba && bb) { return bb - ba; }
               return b.at - a.at;
             });
-            return merged;
+            return self.blockedIds().then(function (ids) {
+              return ids.length ? merged.filter(function (r) { return ids.indexOf(String(r.sellerId || "")) < 0; }) : merged;
+            }, function () { return merged; });
           });
         })
         .catch(function () {
@@ -1034,9 +1036,10 @@
                   live: true
                 };
               });
-              return localP.then(function (local) {
-                return live.concat(local).sort(function (a, b) { return b.updatedAt - a.updatedAt; });
-              });
+              return self.blockedIds().then(function (ids) {
+                if (ids.length) { live = live.filter(function (c) { return ids.indexOf(String(c.buyerId === u.id ? c.sellerId : c.buyerId)) < 0; }); }
+                return localP.then(function (local) { return live.concat(local).sort(function (a, b) { return b.updatedAt - a.updatedAt; }); });
+              }, function () { return localP.then(function (local) { return live.concat(local).sort(function (a, b) { return b.updatedAt - a.updatedAt; }); }); });
             });
           });
       }).catch(function () { return localP; });
@@ -1158,7 +1161,7 @@
       try {
         self.aiScan({ conversation_id: convoId }).then(function (d) {
           if (!d || !d.verdict) { return; }
-          if ((d.verdict === "SPAM" || d.verdict === "SUSPICIOUS") && !self._aiWarned[convoId]) {
+          if (d.verdict === "SPAM" && !self._aiWarned[convoId]) {
             self._aiWarned[convoId] = 1;
             var toastFn = window.NM_toast || window.c;
             if (typeof toastFn === "function") {
@@ -1201,6 +1204,31 @@
       });
     },
 
+    fileChatReport: function (opts) {
+      var self = this;
+      opts = opts || {};
+      if (self.mode !== "supabase" || !self.client) { return Promise.reject(new Error("Connect to the internet to send a report.")); }
+      return self._sbUser().then(function (u) {
+        if (!u) { throw new Error("Log in to send a report."); }
+        var reason = "chat:" + (opts.convoId || "?") + " | peer:" + (opts.peerName || "?") + " | " + (opts.reason || "Other") + (opts.note ? " | note:" + String(opts.note).slice(0, 500) : "");
+        return self.client.from("reports").insert({ reporter_id: u.id, product_id: opts.productId || null, reason: reason });
+      }).then(function (res) {
+        if (res.error) { throw res.error; }
+        return { ok: true };
+      });
+    },
+    listNotifications: function () {
+      var self = this;
+      if (self.mode !== "supabase" || !self.client) { return Promise.resolve([]); }
+      return self._sbUser().then(function (u) {
+        if (!u) { return []; }
+        return self.client.from("notifications").select("id,kind,title,body,meta,created_at")
+          .or("user_id.is.null,user_id.eq." + u.id).order("created_at", { ascending: false }).limit(50);
+      }).then(function (res) {
+        if (res && res.error) { throw res.error; }
+        return (res && res.data) || [];
+      }).catch(function () { return []; });
+    },
     /* ----- favorites (logged in users, Supabase) ----- */
     toggleFavorite: function (productId) {
       var self = this;
@@ -1288,7 +1316,7 @@
     getProfileById: function (userId) {
       var self = this;
       if (self.mode !== "supabase" || !self.client || !isUuid(userId)) { return Promise.resolve(null); }
-      return self.client.from("profiles").select("id,display_name,phone,address,avatar_url,verification_tier,created_at").eq("id", userId).maybeSingle().then(function (res) {
+      return self.client.from("profiles").select("id,display_name,phone,address,avatar_url,verification_tier,created_at,bio").eq("id", userId).maybeSingle().then(function (res) {
         if (res.error || !res.data) { return null; }
         return res.data;
       });
@@ -1545,7 +1573,7 @@
        One channel per signed-in user. postgres_changes respects RLS, so users only
        ever receive events for rows they are allowed to see. Listeners register via
        DB.onLive(kind, cb) with kind in products|messages|conversations|offers|profiles. */
-    var rtListeners = { products: [], messages: [], conversations: [], offers: [], profiles: [] };
+    var rtListeners = { products: [], messages: [], conversations: [], offers: [], profiles: [], statuses: [], follows: [], notifications: [] };
     var rtChannel = null, rtUid = null, rtTimers = {};
     function rtEmit(kind, row) { rtListeners[kind].slice().forEach(function (cb) { try { cb(row); } catch (e) {} }); }
     function rtFire(kind, row) {
@@ -1571,11 +1599,14 @@
             .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, function (p) { rtFire("conversations", p.new || p.old); })
             .on("postgres_changes", { event: "*", schema: "public", table: "offers" }, function (p) { rtFire("offers", p.new || p.old); })
             .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: "id=eq." + u.id }, function (p) { checkGate(); rtFire("profiles", p.new); })
+            .on("postgres_changes", { event: "*", schema: "public", table: "statuses" }, function (p) { rtFire("statuses", p.new || p.old); })
+            .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, function (p) { rtFire("notifications", p.new); })
             .subscribe();
         } catch (e) { rtChannel = null; }
       }).catch(function () {});
     }
     DB.onLive = function (kind, cb) { if (rtListeners[kind] && typeof cb === "function") { rtListeners[kind].push(cb); } };
+    DB._rtFire = rtFire;
 
     if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", checkGate); } else { checkGate(); }
     setInterval(checkGate, 30000);
@@ -1786,7 +1817,160 @@
       } catch (e3) {}
     };
 
-  window.NM_DB = DB;
+  
+/* ----- Follows (real counts, follows table) ----- */
+DB._followingCache = null;
+DB._needLogin = function () {
+  var self = this;
+  if (self.mode !== "supabase" || !self.client) { return Promise.reject(new Error("Connect to the internet to follow sellers.")); }
+  return self._sbUser().then(function (u) { if (!u) { throw new Error("Log in to follow sellers."); } return u; });
+};
+DB.followingIds = function (force) {
+  var self = this;
+  if (self._followingCache && !force) { return Promise.resolve(self._followingCache.slice()); }
+  return self._needLogin().then(function (u) {
+    return self.client.from("follows").select("seller_id").eq("follower_id", u.id);
+  }).then(function (res) {
+    if (res.error) { throw res.error; }
+    self._followingCache = (res.data || []).map(function (r) { return r.seller_id; });
+    return self._followingCache.slice();
+  }).catch(function () { return self._followingCache ? self._followingCache.slice() : []; });
+};
+DB.isFollowing = function (sellerId) {
+  return this.followingIds().then(function (ids) { return ids.indexOf(sellerId) >= 0; });
+};
+DB.followSeller = function (sellerId) {
+  var self = this;
+  return self._needLogin().then(function (u) {
+    if (String(u.id) === String(sellerId)) { throw new Error("You cannot follow yourself."); }
+    return self.client.from("follows").upsert({ follower_id: u.id, seller_id: sellerId }, { onConflict: "follower_id,seller_id", ignoreDuplicates: true });
+  }).then(function (res) {
+    if (res.error) { throw res.error; }
+    self._followingCache = self._followingCache || []; if (self._followingCache.indexOf(sellerId) < 0) { self._followingCache.push(sellerId); } self._rtFire("follows", { seller_id: sellerId });
+    return { ok: true, following: true };
+  });
+};
+DB.unfollowSeller = function (sellerId) {
+  var self = this;
+  return self._needLogin().then(function (u) {
+    return self.client.from("follows").delete().eq("follower_id", u.id).eq("seller_id", sellerId);
+  }).then(function (res) {
+    if (res.error) { throw res.error; }
+    self._followingCache = (self._followingCache || []).filter(function (id) { return String(id) !== String(sellerId); }); self._rtFire("follows", { seller_id: sellerId });
+    return { ok: true, following: false };
+  });
+};
+
+/* blocks */
+DB._blockedCache = null;
+DB.blockedIds = function (force) {
+  var self = this;
+  if (self._blockedCache && !force) { return Promise.resolve(self._blockedCache.slice()); }
+  return self._needLogin().then(function (u) { return self.client.from("blocks").select("blocked_id").eq("blocker_id", u.id); })
+    .then(function (res) {
+      if (res.error) { throw res.error; }
+      self._blockedCache = (res.data || []).map(function (r) { return String(r.blocked_id); });
+      return self._blockedCache.slice();
+    }).catch(function () { return (self._blockedCache || []).slice(); });
+};
+DB.isBlocked = function (peerId) { return this.blockedIds().then(function (ids) { return ids.indexOf(String(peerId)) >= 0; }); };
+DB.blockUser = function (peerId) {
+  var self = this;
+  return self._needLogin().then(function (u) {
+    if (String(u.id) === String(peerId)) { throw new Error("You cannot block yourself."); }
+    return self.client.from("blocks").upsert({ blocker_id: u.id, blocked_id: peerId }, { onConflict: "blocker_id,blocked_id", ignoreDuplicates: true });
+  }).then(function (res) {
+    if (res.error) { throw res.error; }
+    var c = self._blockedCache = self._blockedCache || [];
+    if (c.indexOf(String(peerId)) < 0) { c.push(String(peerId)); }
+    return { ok: true, blocked: true };
+  });
+};
+DB.unblockUser = function (peerId) {
+  var self = this;
+  return self._needLogin().then(function (u) { return self.client.from("blocks").delete().eq("blocker_id", u.id).eq("blocked_id", peerId); })
+    .then(function (res) {
+      if (res.error) { throw res.error; }
+      self._blockedCache = (self._blockedCache || []).filter(function (id) { return String(id) !== String(peerId); });
+        return { ok: true, blocked: false };
+    });
+};
+DB.followerCount = function (sellerId) {
+  var self = this;
+  if (self.mode !== "supabase" || !self.client) { return Promise.resolve(0); }
+  return self.client.from("follows").select("follower_id", { count: "exact", head: true }).eq("seller_id", sellerId)
+    .then(function (res) { return res.error ? 0 : (res.count || 0); }, function () { return 0; });
+};
+DB.followingProfiles = function () {
+  var self = this;
+  return self.followingIds().then(function (ids) {
+    if (!ids.length) { return []; }
+    return self.client.from("profiles").select("id,display_name,avatar_url,last_seen_at").in("id", ids)
+      .then(function (res) { return res.error ? [] : (res.data || []); }, function () { return []; });
+  });
+};
+
+/* ----- Statuses (WhatsApp-style, follower-only via RLS) ----- */
+DB._statusCols = "id,user_id,kind,media_urls,caption,captions,created_at,expires_at";
+DB.listStatuses = function (userIds) {
+  var self = this;
+  if (self.mode !== "supabase" || !self.client || !userIds || !userIds.length) { return Promise.resolve([]); }
+  return self.client.from("statuses").select(self._statusCols)
+    .in("user_id", userIds).gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false }).limit(100)
+    .then(function (res) { return res.error ? [] : (res.data || []); }, function () { return []; });
+};
+DB.myStatuses = function () {
+  var self = this;
+  return self._needLogin().then(function (u) { return self.listStatuses([u.id]); });
+};
+DB.postStatus = function (files, caption) {
+  /* files: array of {file, kind} where kind = 'image'|'video'. */
+  var self = this;
+  return self._needLogin().then(function (u) {
+    var imgs = files.filter(function (f) { return f.kind === "image"; });
+    var vids = files.filter(function (f) { return f.kind === "video"; });
+    if (!imgs.length && !vids.length) { throw new Error("Pick a photo or video first."); }
+    if (imgs.length > 5) { throw new Error("Up to 5 pictures."); }
+    if (vids.length > 1 || (vids.length === 1 && imgs.length)) { throw new Error("Post one video or up to 5 pictures."); }
+    var kind = vids.length ? "video" : "image";
+    var caps = Array.isArray(caption) ? caption : [caption];
+    var list = vids.length ? vids : imgs;
+    var urls = [], chain = Promise.resolve();
+    list.forEach(function (f, i) {
+      chain = chain.then(function () {
+        var ext = (f.file.name || "").split(".").pop().toLowerCase();
+        ext = ext && ext.length < 5 ? ext : (kind === "video" ? "mp4" : "jpg");
+        var path = u.id + "/" + Date.now() + "-" + i + "." + ext;
+        return self.client.storage.from("status-media").upload(path, f.file, { upsert: false }).then(function (res) {
+          if (res.error) { throw res.error; }
+          urls.push(self.client.storage.from("status-media").getPublicUrl(path).data.publicUrl);
+        });
+      });
+    });
+    return chain.then(function () {
+      return self.client.from("statuses").insert({
+        user_id: u.id, kind: kind, media_urls: urls, caption: String(caps[0] || "").slice(0, 300), captions: list.map(function (f, i) { return String(caps[i] || "").slice(0, 300); })
+      }).select(self._statusCols).single();
+    }).then(function (res) {
+      if (res.error) { throw res.error; }
+      self._rtFire("statuses", res.data);
+      return res.data;
+    });
+  });
+};
+DB.deleteStatus = function (id) {
+  var self = this;
+  return self._needLogin().then(function (u) {
+    return self.client.from("statuses").delete().eq("id", id).eq("user_id", u.id);
+  }).then(function (res) {
+    if (res.error) { throw res.error; }
+    self._rtFire("statuses", { id: id, deleted: true });
+    return { ok: true };
+  });
+};
+
+window.NM_DB = DB;
   window.NM_aiScan = function (payload) { return DB.aiScan(payload); };
 
   /* ----- Premium upsell overlay + payment return handling ----- */
