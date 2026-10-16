@@ -1,4 +1,4 @@
-/* Nationwide Connect automated quality gate. Loaded after app.js in tests/run.html.
+/* Nationwide Media Connect automated quality gate. Loaded after app.js in tests/run.html.
    Drives the real UI and asserts each gate item. */
 (function () {
 "use strict";
@@ -37,7 +37,7 @@ function activeScreen() {
 }
 
 async function run() {
-  log("Nationwide Connect quality gate");
+  log("Nationwide Media Connect quality gate");
   localStorage.clear();
   await sleep(800); /* let app boot to auth */
 
