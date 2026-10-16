@@ -9,6 +9,12 @@ var SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 var SITE = "https://nationwide-connect-demo1-skepterforge1471-8639s-projects.vercel.app";
 var FALLBACK_IMG = SITE + "/assets/og-cover.jpg";
 
+function okImg(u) {
+  try {
+    var pu = new URL(String(u));
+    return pu.protocol === "https:" && (pu.host === "qxcifjxytdixiolvkmtv.supabase.co" || pu.host === "nationwide-connect-demo1-skepterforge1471-8639s-projects.vercel.app");
+  } catch (e) { return false; }
+}
 function esc(s) {
   return String(s == null ? "" : s)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -36,17 +42,17 @@ module.exports = async function (req, res) {
     var seller = q.s ? String(q.s).slice(0, 60) : "";
     title = pt + (pp ? " - " + naira(pp) : "") + (seller ? " | " + seller : "");
     desc = (q.l ? String(q.l).slice(0, 80) + " | " : "") + "Nationwide Media Connect";
-    if (q.img) { img = String(q.img); }
+    if (q.img && okImg(q.img)) { img = String(q.img); }
   }
 
   /* 2) Resolve the trailing 32-hex product id via the database. */
-  var m = code.match(/([0-9a-f]{32})$/i);
+  var m = code.replace(/-/g, "").match(/([0-9a-f]{32})$/i);
   if (m && !hasEmbedded) {
     var hex = m[1].toLowerCase();
     var uuid = hex.slice(0, 8) + "-" + hex.slice(8, 12) + "-" + hex.slice(12, 16) + "-" + hex.slice(16, 20) + "-" + hex.slice(20);
     try {
       var url = SUPABASE_URL + "/rest/v1/products?select=id,title,description,price,location,image_urls,profiles(display_name)" +
-        "&id=eq." + uuid + "&status=eq.active&limit=1";
+        "&id=eq." + uuid + "&status=in.(active,sold)&limit=1";
       var r = await fetch(url, {
         headers: { apikey: SUPABASE_ANON, Authorization: "Bearer " + SUPABASE_ANON }
       });
@@ -89,7 +95,7 @@ module.exports = async function (req, res) {
     "<meta name=\"twitter:image\" content=\"" + esc(img) + "\">" +
     "<meta http-equiv=\"refresh\" content=\"0;url=" + esc(target) + "\">" +
     "</head><body>" +
-    "<p>Opening <a href=\"" + esc(target) + "\">Nationwide Connect</a>\u2026</p>" +
+    "<p>Opening <a href=\"" + esc(target) + "\">Nationwide Media Connect</a>\u2026</p>" +
     "<script>window.location.replace(" + JSON.stringify(target) + ");</script>" +
     "</body></html>"
   );

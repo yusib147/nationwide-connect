@@ -11,6 +11,12 @@ var SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 var SITE = "https://nationwide-connect-demo1-skepterforge1471-8639s-projects.vercel.app";
 var FALLBACK_IMG = SITE + "/assets/og-cover.jpg";
 
+function okImg(u) {
+  try {
+    var pu = new URL(String(u));
+    return pu.protocol === "https:" && (pu.host === "qxcifjxytdixiolvkmtv.supabase.co" || pu.host === "nationwide-connect-demo1-skepterforge1471-8639s-projects.vercel.app");
+  } catch (e) { return false; }
+}
 function esc(s) {
   return String(s == null ? "" : s)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -33,9 +39,9 @@ module.exports = async function (req, res) {
   if (q.t) {
     var pt = String(q.t).slice(0, 120);
     var pp = q.pr || "";
-    title = pt + (pp ? " - " + naira(pp) : "") + " | Nationwide Connect";
+    title = pt + (pp ? " - " + naira(pp) : "") + " | Nationwide Media Connect";
     desc = (q.l ? String(q.l).slice(0, 80) + " | " : "") + "Nationwide Media Connect";
-    if (q.img) { img = String(q.img); }
+    if (q.img && okImg(q.img)) { img = String(q.img); }
   }
 
   if (id) {
@@ -44,7 +50,7 @@ module.exports = async function (req, res) {
     if (!q.t || !q.img) {
       try {
         var url = SUPABASE_URL + "/rest/v1/products?select=title,description,price,location,image_urls" +
-          "&id=eq." + encodeURIComponent(id) + "&status=eq.active&limit=1";
+          "&id=eq." + encodeURIComponent(id) + "&status=in.(active,sold)&limit=1";
         var r = await fetch(url, {
           headers: { apikey: SUPABASE_ANON, Authorization: "Bearer " + SUPABASE_ANON }
         });
@@ -54,7 +60,7 @@ module.exports = async function (req, res) {
           var imgs = p.image_urls || [];
           if (!q.img && imgs.length && imgs[0]) { img = imgs[0]; }
           if (!q.t) {
-            title = (p.title || "Item") + " - " + naira(p.price) + " | Nationwide Connect";
+            title = (p.title || "Item") + " - " + naira(p.price) + " | Nationwide Media Connect";
             var d = (p.description || "").replace(/\s+/g, " ").trim().slice(0, 150);
             desc = (d ? d + " " : "") + "| " + (p.location || "Nigeria");
           }
@@ -83,7 +89,7 @@ module.exports = async function (req, res) {
     "<meta name=\"twitter:image\" content=\"" + esc(img) + "\">" +
     "<meta http-equiv=\"refresh\" content=\"0;url=" + esc(target) + "\">" +
     "</head><body>" +
-    "<p>Opening <a href=\"" + esc(target) + "\">Nationwide Connect</a>\u2026</p>" +
+    "<p>Opening <a href=\"" + esc(target) + "\">Nationwide Media Connect</a>\u2026</p>" +
     "<script>window.location.replace(" + JSON.stringify(target) + ");</script>" +
     "</body></html>"
   );
