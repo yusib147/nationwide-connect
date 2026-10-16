@@ -3,7 +3,9 @@
 import base64, hashlib, json, os, subprocess, sys, time
 
 SRC = os.path.expanduser("~/workspace/naija-market")
-SKIP = {"tests/shot.html"}
+SKIP = {"tests/shot.html", "face-api.min.js"}
+# Skip large face-model binaries (loaded from CDN instead)
+SKIP_PREFIXES = ("assets/face-models/",)
 WRAPPER = "/opt/hatch/bin/vercel"
 PROJECT = "nationwide-connect-demo1"
 ALIAS = "nationwide-connect-demo1-skepterforge1471-8639s-projects.vercel.app"
@@ -23,7 +25,7 @@ for root, _, names in os.walk(SRC):
     for n in names:
         p = os.path.join(root, n)
         rel = os.path.relpath(p, SRC).replace(os.sep, "/")
-        if rel in SKIP: continue
+        if rel in SKIP or rel.startswith(SKIP_PREFIXES): continue
         with open(p, "rb") as f: raw = f.read()
         files.append((rel, raw))
 print(f"{len(files)} files", flush=True)
