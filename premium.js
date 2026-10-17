@@ -12,12 +12,36 @@ function initPremiumUI() {
     track.dataset.ncInit = "1";
     var slides = track.children.length, idx = 0;
     var dots = dotsWrap ? dotsWrap.children : [];
-    setInterval(function () {
-      if (!document.body.contains(track)) { return; }
-      idx = (idx + 1) % slides;
+    var heroHoldUntil = 0;
+    function paintHero() {
       track.style.transform = "translateX(-" + (idx * 100) + "%)";
       for (var i = 0; i < dots.length; i++) { dots[i].className = i === idx ? "on" : ""; }
-    }, 4500);
+    }
+    /* Hardened 2026-10-17 (backlog 82/83): no rotation for reduced-motion
+       users, no ticks in background tabs, a touch holds the current slide,
+       and the dots are tappable. */
+    if (!reduceMotion()) {
+      setInterval(function () {
+        if (!document.body.contains(track)) { return; }
+        if (document.hidden) { return; }
+        if (Date.now() < heroHoldUntil) { return; }
+        idx = (idx + 1) % slides;
+        paintHero();
+      }, 4500);
+    }
+    track.addEventListener("touchstart", function () { heroHoldUntil = Date.now() + 6000; }, { passive: true });
+    track.addEventListener("touchend", function () { heroHoldUntil = Date.now() + 2500; }, { passive: true });
+    if (dotsWrap) {
+      dotsWrap.addEventListener("click", function (e) {
+        var d = e.target && e.target.closest ? e.target.closest("span") : null;
+        if (!d) { return; }
+        var k = Array.prototype.indexOf.call(dots, d);
+        if (k < 0) { return; }
+        idx = k;
+        paintHero();
+        heroHoldUntil = Date.now() + 6000;
+      });
+    }
     /* hero CTA buttons navigate */
     track.addEventListener("click", function (e) {
       var b = e.target.closest("[data-hero-go]");

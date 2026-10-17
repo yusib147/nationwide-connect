@@ -47,10 +47,26 @@
   + ".nm-skel i{display:block;height:64px;border-radius:14px;background:linear-gradient(90deg,var(--line-soft) 25%,rgba(127,127,127,.16) 50%,var(--line-soft) 75%);background-size:200% 100%;animation:nmShimmer 1.15s linear infinite}"
   + "@keyframes nmShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}"
   + ".nm-empty-note{padding:26px 12px;text-align:center;color:var(--muted);font-size:13.5px;line-height:1.5}"
+  + ".nm-prem-line{margin-top:2px;width:100%;border:0;background:transparent;cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--muted);text-align:center;padding:8px 4px}"
   + "#nm-refer-fab{position:fixed;top:calc(env(safe-area-inset-top,0px) + 58px);right:10px;z-index:99985;display:none;align-items:center;gap:6px;border:0;cursor:pointer;font-family:inherit;font-size:12px;font-weight:800;color:#fff;background:linear-gradient(135deg,#e8380d,#ff7a18);border-radius:999px;padding:8px 13px;box-shadow:0 8px 20px rgba(232,56,13,.45);animation:nmFabDance 2.6s ease-in-out infinite}"
   + "#nm-refer-fab.show{display:flex}"
   + "#nm-refer-fab:active{transform:scale(.94)}"
   + "@keyframes nmFabDance{0%,100%{transform:rotate(-4deg) translateY(0)}25%{transform:rotate(4deg) translateY(-4px)}50%{transform:rotate(-3deg) translateY(0)}75%{transform:rotate(3deg) translateY(-3px)}}"
+  + ".nm-mepage-body #me-favs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;overflow:visible;scroll-snap-type:none;padding:0}"
+  + ".nm-mepage-body #me-favs>.card{flex:none;width:auto;min-width:0;scroll-snap-align:none}"
+  + ".nm-mepage-body .mex-favctl{display:none}"
+  + ".nm-banner{border-radius:18px;padding:18px 16px;color:#fff;margin-bottom:14px;position:relative;overflow:hidden}"
+  + ".nm-banner .nm-b-ico{font-size:34px;line-height:1}"
+  + ".nm-banner h3{margin:8px 0 6px;font-size:19px;font-weight:800;line-height:1.25}"
+  + ".nm-banner p{margin:0;font-size:13.5px;line-height:1.5;opacity:.95}"
+  + ".nm-banner ul{margin:10px 0 0;padding:0;list-style:none}"
+  + ".nm-banner li{font-size:13px;font-weight:700;margin-top:6px}"
+  + ".nm-banner li::before{content:'\\2713  '}"
+  + ".nm-banner .nm-b-price{display:inline-block;margin-top:12px;background:rgba(255,255,255,.22);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:800}"
+  + ".nm-banner-grow{background:linear-gradient(135deg,#0d7a3f,#1cab55 55%,#35c26e)}"
+  + ".nm-banner-prem{background:linear-gradient(135deg,#e8380d,#ff7a18 60%,#ffa41c)}"
+  + ".nm-banner::after{content:'';position:absolute;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.14);right:-60px;top:-70px;pointer-events:none}"
+  + ".nm-mepage-body #me-advertise,.nm-mepage-body #me-premium{padding:14px;font-size:15px;font-weight:800;border-radius:14px}"
   + "@media (prefers-reduced-motion: reduce){#nm-refer-fab,.nm-me-refer,.nm-load-dots span,.nm-skel i{animation:none}}";
   var st = document.createElement("style");
   st.id = "nm-me-pages";
@@ -95,9 +111,11 @@
       nodes: function () { return pickIds(["me-sec-verify"]); }, prep: openDetails },
     { key: "profile", title: "Edit profile", icon: "\u270F\uFE0F",
       nodes: function () { return pickIds(["me-sec-profile"]); }, prep: openDetails },
-    { key: "grow", title: "Grow your business", icon: "\u{1F4C8}",
+    { key: "grow", title: "Grow your business", icon: "\u{1F4C8}", bannerCls: "nm-banner-grow",
+      banner: '<div class="nm-b-ico">\u{1F4E3}</div><h3>Put your business on the home page</h3><p>Every buyer who opens Nationwide Media Connect lands on the home page first. Your banner sits in that space for 30 days, in front of everyone who visits.</p><ul><li>Your business in the home page banner space</li><li>Runs for a full 30 days</li><li>One payment, no daily posting stress</li></ul><span class="nm-b-price">\u20A610,000 \u00B7 30 days</span>',
       nodes: function () { return pickIds(["me-advertise"]); } },
-    { key: "premium", title: "Get Premium", icon: "\u{1F451}",
+    { key: "premium", title: "Get Premium", icon: "\u{1F451}", bannerCls: "nm-banner-prem",
+      banner: '<div class="nm-b-ico">\u{1F451}</div><h3>Sell without limits</h3><p>A free account stops at 3 listings. Premium removes the cap completely, so everything you have for sale can be live at the same time.</p><ul><li>Unlimited listings</li><li>Launch offer: 2 months for \u20A61,000</li><li>Your listings get boosted on the launch plan</li></ul><span class="nm-b-price">From \u20A61,000</span>',
       nodes: function () { return pickIds(["me-premium"]); } }
   ];
 
@@ -153,6 +171,16 @@
       if (el.style && el.style.display === "none" && el.id !== "me-empty") { el.style.display = ""; }
     });
     if (pg.prep) { try { pg.prep(els); } catch (e) {} }
+    /* Pages with a sales banner (Grow / Get Premium) get it on top. */
+    if (pg.banner) {
+      if (!pg._bannerEl) {
+        var bd = document.createElement("div");
+        bd.className = "nm-banner nm-own " + (pg.bannerCls || "");
+        bd.innerHTML = pg.banner;
+        pg._bannerEl = bd;
+      }
+      slot.insertBefore(pg._bannerEl, slot.firstChild);
+    }
     /* A friendly note when there is genuinely nothing to show. */
     var note = slot.querySelector(".nm-empty-note");
     var hasContent = slot.children.length > 0 && (slot.textContent.trim() !== "" || !!slot.querySelector("img,button,input,select,textarea,.card"));
@@ -180,7 +208,7 @@
     if (curPage && slots[curPage.key]) {
       var slot = slots[curPage.key];
       Array.prototype.slice.call(slot.children).forEach(function (el) {
-        if (el.classList && el.classList.contains("nm-empty-note")) { el.remove(); return; }
+        if (el.classList && (el.classList.contains("nm-empty-note") || el.classList.contains("nm-own"))) { el.remove(); return; }
         var home = el.__nmHome;
         if (home && home.p && document.contains(home.p)) {
           if (home.n && home.n.parentNode === home.p) { home.p.insertBefore(el, home.n); } else { home.p.appendChild(el); }
@@ -247,6 +275,36 @@
     }
   }
 
+  /* #79 — sellers always see where they stand: premium state or free quota */
+  var premCache = { t: 0, s: null };
+  function paintPremLine(menu) {
+    var DB = window.NM_DB;
+    if (!DB || !DB.premiumStatus) { return; }
+    var render = function (s) {
+      if (!s || !document.body.contains(menu)) { return; }
+      var line = menu.querySelector(".nm-prem-line");
+      if (!line) {
+        line = document.createElement("button");
+        line.type = "button";
+        line.className = "nm-prem-line";
+        line.addEventListener("click", function () { if (window.NM_showPremium) { window.NM_showPremium({}); } });
+        menu.appendChild(line);
+      }
+      var txt;
+      if (s.active) {
+        var mm = null;
+        try { mm = window.NM_int && window.NM_int.me ? window.NM_int.me() : null; } catch (e) {}
+        var until = mm && mm.premium_until ? new Date(mm.premium_until) : null;
+        txt = "\u{1F451} Premium active" + (until && !isNaN(until.getTime()) ? " until " + until.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
+      } else {
+        txt = s.count + " of " + s.limit + " free listings used. Tap for Premium";
+      }
+      if (line.textContent !== txt) { line.textContent = txt; }
+    };
+    if (premCache.s && Date.now() - premCache.t < 30000) { render(premCache.s); return; }
+    DB.premiumStatus().then(function (s) { premCache = { t: Date.now(), s: s }; render(s); }).catch(function () {});
+  }
+
   var badgeObs = null;
   function transform() {
     try { transformInner(); } catch (e) { LOG("transform error: " + (e && e.message ? e.message : e)); }
@@ -286,6 +344,7 @@
     if (hero && hero.parentNode === body) { body.insertBefore(menu, hero.nextSibling); }
     else { body.insertBefore(menu, body.firstChild); }
     syncBadges(menu);
+    paintPremLine(menu);
     try {
       if (badgeObs) { badgeObs.disconnect(); }
       badgeObs = new MutationObserver(function () { syncBadges(menu); });
@@ -327,4 +386,323 @@
     setTimeout(transform, 120);
   }
   if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", boot); } else { boot(); }
+})();
+
+/* ===== Site fixes pack (2026-10-17, Ibrahim's fix session) =====
+   Backlog 88 (auth double-submit guards), 89 (password show/hide toggles),
+   90 (OTP: typed 6th digit / Enter verifies), 117 (sell error scrolls into
+   view), 118 (sell draft keeps the subcategory), 136 (premium state is
+   re-checked against the server when Me opens, one guarded reload if the
+   app is stale), plus a Me profile save hardening (blur first). Every
+   feature is independent and failure-isolated. */
+(function () {
+  "use strict";
+  if (window.__nmFixes) { return; }
+  window.__nmFixes = 1;
+  var st = document.createElement("style");
+  st.id = "nm-fixes-style";
+  st.textContent = ".finora-input{position:relative}"
+    + ".finora-input input.nm-eye-in{padding-right:46px!important}"
+    + ".nm-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;cursor:pointer;font-size:16px;line-height:1;padding:9px 7px;color:var(--muted);z-index:2}"
+    + ".offer-btns button{padding:12px 10px;min-height:44px}"
+    + ".sort-pill{padding:12px 16px!important;min-height:44px}"
+    + ".report-link{padding:14px 8px}"
+    + "#hero-dots span{cursor:pointer}"
+    + "#thread-product{cursor:pointer}";
+  document.head.appendChild(st);
+
+  function onReady(fn) { if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", fn); } else { fn(); } }
+
+  /* #89 — password visibility toggles */
+  function addEyes() {
+    try {
+      ["login-pass", "signup-pass", "recover-pass", "recover-pass2"].forEach(function (id) {
+        var inp = document.getElementById(id);
+        if (!inp || inp.getAttribute("data-nm-eye")) { return; }
+        var wrap = (inp.closest && (inp.closest(".finora-input") || inp.parentElement)) || inp.parentElement;
+        if (!wrap) { return; }
+        inp.setAttribute("data-nm-eye", "1");
+        inp.classList.add("nm-eye-in");
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "nm-eye";
+        b.textContent = "\u{1F441}\uFE0F";
+        b.setAttribute("aria-label", "Show password");
+        b.setAttribute("aria-pressed", "false");
+        b.addEventListener("click", function () {
+          var show = inp.type === "password";
+          inp.type = show ? "text" : "password";
+          b.setAttribute("aria-pressed", show ? "true" : "false");
+          b.setAttribute("aria-label", show ? "Hide password" : "Show password");
+          try { inp.focus(); } catch (e) {}
+        });
+        wrap.appendChild(b);
+      });
+    } catch (e) {}
+  }
+
+  /* #88 — double-submit guards on the auth forms */
+  var guardTimers = {};
+  function reenable(form) {
+    if (!form) { return; }
+    var btn = form.querySelector(".btn-primary");
+    if (btn && btn.disabled) { btn.disabled = false; }
+    if (guardTimers[form.id]) { clearTimeout(guardTimers[form.id]); guardTimers[form.id] = null; }
+  }
+  function reenableAll() { ["form-signup", "form-login", "form-forgot"].forEach(function (id) { reenable(document.getElementById(id)); }); }
+  function armGuards() {
+    try {
+      ["form-signup", "form-login", "form-forgot"].forEach(function (id) {
+        var f = document.getElementById(id);
+        if (!f || f.getAttribute("data-nm-guard")) { return; }
+        f.setAttribute("data-nm-guard", "1");
+        f.addEventListener("submit", function () {
+          var btn = f.querySelector(".btn-primary");
+          if (btn && !btn.disabled) {
+            btn.disabled = true;
+            guardTimers[id] = setTimeout(function () { reenable(f); }, 8000);
+          }
+        });
+      });
+      ["auth-error", "otp-error", "recover-error"].forEach(function (eid) {
+        var el = document.getElementById(eid);
+        if (el && !el.getAttribute("data-nm-obs")) {
+          el.setAttribute("data-nm-obs", "1");
+          try { new MutationObserver(function () { if (!el.hidden) { reenableAll(); } }).observe(el, { attributes: true, attributeFilter: ["hidden"] }); } catch (e) {}
+        }
+      });
+      document.querySelectorAll(".screen").forEach(function (s) {
+        try { new MutationObserver(function () { if (s.classList.contains("active")) { reenableAll(); } }).observe(s, { attributes: true, attributeFilter: ["class"] }); } catch (e) {}
+      });
+    } catch (e) {}
+  }
+
+  /* #90 — OTP: typing the 6th digit, or pressing Enter, verifies */
+  function armOtp() {
+    try {
+      var boxes = document.getElementById("otp-boxes");
+      if (!boxes || boxes.getAttribute("data-nm-otp")) { return; }
+      boxes.setAttribute("data-nm-otp", "1");
+      boxes.addEventListener("input", function (e) {
+        if (e.inputType && e.inputType !== "insertText") { return; }
+        var inputs = boxes.querySelectorAll("input");
+        if (inputs.length < 6 || e.target !== inputs[5] || !e.target.value) { return; }
+        for (var i = 0; i < 6; i++) { if (!inputs[i].value) { return; } }
+        var v = document.getElementById("otp-verify");
+        if (v) { v.click(); }
+      });
+      boxes.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { var v = document.getElementById("otp-verify"); if (v) { v.click(); } }
+      });
+    } catch (e) {}
+  }
+
+  /* #133b — terms row: tapping the words toggles the box (deterministic JS,
+     the legal buttons keep their own action). The labels' native activation
+     is stripped so the JS toggle is the ONLY toggle, and the end state is
+     enforced after any late synthetic click settles. */
+  function armTerms() {
+    try {
+      document.querySelectorAll('.terms-check label[for="signup-terms"]').forEach(function (l) { l.removeAttribute("for"); });
+    } catch (e) {}
+    document.addEventListener("click", function (e) {
+      try {
+        var t = e.target;
+        if (!t || !t.closest) { return; }
+        var row = t.closest(".terms-check");
+        if (!row) { return; }
+        if (t.closest("[data-legal]") || t.id === "signup-terms") { return; }
+        var box = document.getElementById("signup-terms");
+        if (!box) { return; }
+        e.preventDefault();
+        var want = !box.checked;
+        box.checked = want;
+        try { if (window.__nmMeLog) { window.__nmMeLog.push("terms tap -> " + want); } } catch (err) {}
+        setTimeout(function () {
+          if (box.checked !== want) { box.checked = want; }
+          try { box.dispatchEvent(new Event("change", { bubbles: true })); } catch (err) {}
+        }, 80);
+      } catch (err) {}
+    }, true);
+  }
+
+  /* #117 — sell form: scroll the validation error into view */
+  function armSellScroll() {
+    try {
+      var f = document.getElementById("sell-form");
+      if (!f || f.getAttribute("data-nm-scroll")) { return; }
+      f.setAttribute("data-nm-scroll", "1");
+      f.addEventListener("submit", function () {
+        setTimeout(function () {
+          var err = document.getElementById("sell-error");
+          if (err && !err.hidden && (err.textContent || "").trim()) {
+            try { err.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {}
+          }
+        }, 350);
+      });
+    } catch (e) {}
+  }
+
+  /* #118 — sell draft: keep the subcategory across tab restarts */
+  var SUBKEY = "nc_sell_subcat";
+  var subAppliedFor = "";
+  function armSubcat() {
+    document.addEventListener("change", function (e) {
+      if (e.target && e.target.id === "sell-subcategory") {
+        try {
+          var cat = document.getElementById("sell-category");
+          localStorage.setItem(SUBKEY, JSON.stringify({ cat: cat ? cat.value : "", sub: e.target.value }));
+        } catch (err) {}
+      }
+    }, true);
+  }
+  function applySubcat() {
+    try {
+      var scr = document.getElementById("screen-sell");
+      if (!scr || !scr.classList.contains("active")) { subAppliedFor = ""; return; }
+      var stamp = "";
+      try { stamp = localStorage.getItem(SUBKEY) || ""; } catch (e) {}
+      if (!stamp || stamp === subAppliedFor) { return; }
+      var saved = null;
+      try { saved = JSON.parse(stamp); } catch (e) { return; }
+      if (!saved || !saved.sub) { subAppliedFor = stamp; return; }
+      var mainDraft = null;
+      try { mainDraft = localStorage.getItem("nc_sell_draft"); } catch (e) {}
+      if (!mainDraft) { try { localStorage.removeItem(SUBKEY); } catch (e) {} subAppliedFor = stamp; return; }
+      var cat = document.getElementById("sell-category"), sub = document.getElementById("sell-subcategory");
+      if (!cat || !sub) { return; }
+      if (saved.cat && cat.value !== saved.cat) { cat.value = saved.cat; }
+      if (window.NM_fillSubcats) { try { window.NM_fillSubcats(cat.value); } catch (e) {} }
+      for (var i = 0; i < sub.options.length; i++) {
+        if (sub.options[i].value === saved.sub) { sub.value = saved.sub; break; }
+      }
+      subAppliedFor = stamp;
+    } catch (e) {}
+  }
+
+  /* Me profile: blur the focused field before Save runs */
+  function armMeSaveBlur() {
+    document.addEventListener("click", function (e) {
+      try {
+        var t = e.target;
+        if (!t || !t.closest) { return; }
+        if (!t.closest("#me-sec-profile")) { return; }
+        var btn = t.closest("button");
+        if (btn && /save profile/i.test(btn.textContent || "") && document.activeElement && document.activeElement !== btn) {
+          document.activeElement.blur();
+        }
+      } catch (err) {}
+    }, true);
+  }
+
+  /* #136 — premium state: re-check against the server when Me opens */
+  var lastPremCheck = 0;
+  function checkPremium() {
+    var now = Date.now();
+    if (now - lastPremCheck < 5000) { return; }
+    lastPremCheck = now;
+    var DB = window.NM_DB;
+    if (!DB || !DB.client || !DB.currentUser) { return; }
+    DB.currentUser().then(function (u) {
+      if (!u || !u.id) { return null; }
+      return DB.client.from("profiles").select("verification_tier, premium_until").eq("id", u.id).maybeSingle();
+    }).then(function (res) {
+      if (!res || res.error || !res.data) { return; }
+      var appMe = null;
+      try { appMe = window.NM_int && window.NM_int.me ? window.NM_int.me() : null; } catch (e) {}
+      if (!appMe || typeof appMe.verification_tier !== "string") { return; }
+      var freshGold = res.data.verification_tier === "gold";
+      var appGold = appMe.verification_tier === "gold";
+      var freshUntil = res.data.premium_until || null;
+      var appUntil = ("premium_until" in appMe) ? (appMe.premium_until || null) : freshUntil;
+      if (freshGold === appGold && String(freshUntil) === String(appUntil)) { return; }
+      try {
+        var last = parseInt(sessionStorage.getItem("nm_prem_fix") || "0", 10);
+        if (Date.now() - last < 60000) { return; }
+        sessionStorage.setItem("nm_prem_fix", String(Date.now()));
+      } catch (e) { return; }
+      location.reload();
+    }).catch(function () {});
+  }
+
+  /* #100 — the buyer hears the answer: post it into the chat thread */
+  function wrapAnswerOffer() {
+    try {
+      var DB = window.NM_DB;
+      if (!DB || DB.__nmAnswerWrapped || typeof DB.answerOffer !== "function" || !DB.client) { return; }
+      DB.__nmAnswerWrapped = 1;
+      var orig = DB.answerOffer;
+      DB.answerOffer = function (offerId, status, counterAmount) {
+        var pre = Promise.resolve(null);
+        try {
+          pre = DB.client.from("offers").select("buyer_id, product_id, amount").eq("id", offerId).maybeSingle()
+            .then(function (r) { return r && r.data ? r.data : null; }).catch(function () { return null; });
+        } catch (e) {}
+        return pre.then(function (offer) {
+          return orig(offerId, status, counterAmount).then(function (out) {
+            try { notifyBuyer(offer, status, counterAmount); } catch (e) {}
+            return out;
+          });
+        });
+      };
+      function notifyBuyer(offer, status, counterAmount) {
+        if (!offer || !offer.buyer_id || !offer.product_id) { return; }
+        var DB = window.NM_DB;
+        DB.currentUser().then(function (me) {
+          if (!me || !me.id) { return null; }
+          return DB.client.from("conversations").select("id").eq("product_id", offer.product_id).eq("buyer_id", offer.buyer_id).eq("seller_id", me.id).maybeSingle();
+        }).then(function (res) {
+          if (!res || !res.data || !res.data.id) { return; }
+          var amt = "\u20A6" + Number(offer.amount || 0).toLocaleString("en-NG");
+          var txt = null;
+          if (status === "accepted") { txt = "Offer accepted: " + amt + " \u2014 chat here to close the deal."; }
+          else if (status === "declined") { txt = "Offer of " + amt + " was declined."; }
+          else if (counterAmount) { txt = "Counter offer: \u20A6" + Number(counterAmount).toLocaleString("en-NG") + " (was " + amt + ")."; }
+          if (txt && typeof DB.sendMessage === "function") {
+            var p = DB.sendMessage(res.data.id, txt);
+            if (p && p.catch) { p.catch(function () {}); }
+          }
+        }).catch(function () {});
+      }
+    } catch (e) {}
+  }
+
+  /* #118b — apply the saved subcategory the moment Sell opens, twice,
+     so late form fills cannot leave the placeholder showing */
+  var sellObs = null;
+  function armSellObserver() {
+    try {
+      var scr = document.getElementById("screen-sell");
+      if (!scr || sellObs) { return; }
+      sellObs = new MutationObserver(function () {
+        if (scr.classList.contains("active")) {
+          subAppliedFor = "";
+          applySubcat();
+          setTimeout(function () { subAppliedFor = ""; applySubcat(); }, 600);
+        }
+      });
+      sellObs.observe(scr, { attributes: true, attributeFilter: ["class"] });
+    } catch (e) {}
+  }
+
+  function tick() {
+    var scr = document.getElementById("screen-me");
+    if (scr && scr.classList.contains("active")) { checkPremium(); }
+    applySubcat();
+  }
+
+  onReady(function () {
+    addEyes();
+    armGuards();
+    armOtp();
+    armSellScroll();
+    armSubcat();
+    armSellObserver();
+    armTerms();
+    armMeSaveBlur();
+    wrapAnswerOffer();
+    setTimeout(addEyes, 1500);
+    setInterval(tick, 1200);
+    if (/[?&]pay=return/.test(location.search)) { setTimeout(checkPremium, 3000); }
+  });
 })();
