@@ -62,29 +62,31 @@ module.exports = async function (req, res) {
       await lib.sb("profiles?id=eq." + uid + "&referred_by=is.null", { method: "PATCH", body: JSON.stringify({ referred_by: owner.id, referral_code_used: code }) });
       return res.status(200).send(JSON.stringify({ ok: true }));
     }
-    if (b.action === "mycode") {
-      var p2 = await lib.sb("profiles?select=referral_code&id=eq." + uid, {});
+    async function ensureReferralCode(uid2) {
+      var p2 = await lib.sb("profiles?select=referral_code&id=eq." + uid2, {});
       var existing = p2 && p2[0] && p2[0].referral_code;
-      if (existing) return res.status(200).send(JSON.stringify({ ok: true, code: existing }));
+      if (existing) return existing;
       var ABC = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
       for (var attempt = 0; attempt < 6; attempt++) {
         var cand = "NM";
         var buf = crypto.randomBytes(6);
         for (var i = 0; i < 6; i++) cand += ABC[buf[i] % ABC.length];
-        // Cross-check 1: the candidate must not exist anywhere in the database.
         var clash = await lib.sb("profiles?select=id&referral_code=eq." + encodeURIComponent(cand), {}).catch(function () { return null; });
         if (!clash || clash.length) continue;
         try {
-          await lib.sb("profiles?id=eq." + uid + "&referral_code=is.null", { method: "PATCH", body: JSON.stringify({ referral_code: cand }) });
-        } catch (e) { continue; } // the unique index rejected a race: try another candidate
-        // Cross-check 2: exactly one profile in the whole database holds the
-        // code now, and it is the caller.
+          await lib.sb("profiles?id=eq." + uid2 + "&referral_code=is.null", { method: "PATCH", body: JSON.stringify({ referral_code: cand }) });
+        } catch (e) { continue; }
         var holders = await lib.sb("profiles?select=id&referral_code=eq." + encodeURIComponent(cand), {}).catch(function () { return null; });
-        if (holders && holders.length === 1 && holders[0].id === uid) return res.status(200).send(JSON.stringify({ ok: true, code: cand }));
-        var chk = await lib.sb("profiles?select=referral_code&id=eq." + uid, {});
-        if (chk && chk[0] && chk[0].referral_code) return res.status(200).send(JSON.stringify({ ok: true, code: chk[0].referral_code }));
+        if (holders && holders.length === 1 && holders[0].id === uid2) return cand;
+        var chk = await lib.sb("profiles?select=referral_code&id=eq." + uid2, {});
+        if (chk && chk[0] && chk[0].referral_code) return chk[0].referral_code;
       }
-      return res.status(500).send(JSON.stringify({ error: "could not generate a code" }));
+      return null;
+    }
+    if (b.action === "mycode") {
+      var code0 = await ensureReferralCode(uid);
+      if (!code0) return res.status(500).send(JSON.stringify({ error: "could not generate a code" }));
+      return res.status(200).send(JSON.stringify({ ok: true, code: code0 }));
     }
     if (b.action === "summary") {
       var data = await Promise.all([
@@ -94,6 +96,8 @@ module.exports = async function (req, res) {
         ledgerOf(uid),
         withdrawalsOf(uid)
       ]);
+      var codeFinal = (data[0] && data[0][0] && data[0][0].referral_code) || null;
+      if (!codeFinal) { try { codeFinal = await ensureReferralCode(uid); } catch (e) { codeFinal = null; } }
       var s = sums(data[3]);
       var requested = 0;
       (data[4] || []).forEach(function (w) { if (w.status === "requested") requested += Number(w.amount_kobo) || 0; });
@@ -111,7 +115,7 @@ module.exports = async function (req, res) {
       });
       return res.status(200).send(JSON.stringify({
         ok: true,
-        code: (data[0] && data[0][0] && data[0][0].referral_code) || null,
+        code: codeFinal,
         referredCount: (data[1] || []).length,
         subscribedCount: (data[2] || []).filter(function (r) { return r.status === "credited" || r.status === "held"; }).length,
         cashKobo: s.cash, creditKobo: s.credit, cashAvailableKobo: Math.max(0, s.cashCleared - requested),
@@ -144,8 +148,9 @@ module.exports = async function (req, res) {
       }
       var prow;
       try {
-        var ins = await lib.sb("payments", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify([{ user_id: uid, purpose: plan.purpose, target_id: target, plan: b.plan, amount_kobo: price, reference: reference, status: "initiated", meta: { method: "wallet" } }]) });
-        prow = ins && ins[0];
+        await lib.sb("payments", { method: "POST", body: JSON.stringify([{ user_id: uid, purpose: plan.purpose, target_id: target, plan: b.plan, amount_kobo: price, reference: reference, status: "pending", meta: { method: "wallet" } }]) });
+        var gotRow = await lib.sb("payments?select=*&reference=eq." + reference + "&limit=1", {});
+        prow = gotRow && gotRow[0];
         if (!prow) throw new Error("no payment row");
         var done = await lib.fulfill(prow);
         if (!done) throw new Error("fulfilment failed");

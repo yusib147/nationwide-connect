@@ -53,39 +53,54 @@ function applyPromoAds(p, now) {
   }).catch(function () { return null; });
 }
 
-// Idempotent: only activates a payment whose status is not yet "paid".
+// Idempotent + race-safe: only activates a payment whose status is not yet
+// "paid". The caller must first WIN an atomic claim (a unique token written
+// into meta under a status filter, then read back) before applying benefits,
+// so the verify endpoint and the webhook firing together can never apply a
+// benefit (e.g. premium months) twice for one payment.
 function fulfill(p) {
   if (!p || p.status === "paid") return Promise.resolve(false);
   var now = new Date();
   var plan = PLANS[p.plan] || {};
   var days = plan.days || 0;
-  var work = Promise.resolve();
-  if (p.purpose === "bump" && p.target_id) {
-    work = sb("products?id=eq." + p.target_id, { method: "PATCH", body: JSON.stringify({ bump_at: now.toISOString() }) });
-  } else if (p.purpose === "featured" && p.target_id) {
-    var exp = new Date(now.getTime() + days * 864e5).toISOString();
-    work = sb("admin_featured?select=product_id&product_id=eq." + p.target_id + "&limit=1", {}).then(function (rows) {
-      if (rows && rows.length) return sb("admin_featured?product_id=eq." + p.target_id, { method: "PATCH", body: JSON.stringify({ expires_at: exp, source: "paid" }) });
-      return sb("admin_featured", { method: "POST", body: JSON.stringify([{ product_id: p.target_id, expires_at: exp, source: "paid" }]) });
-    });
-  } else if (p.purpose === "premium") {
-    work = sb("profiles?select=premium_until&id=eq." + p.user_id, {}).then(function (rows) {
-      var cur = rows && rows[0] && rows[0].premium_until ? new Date(rows[0].premium_until) : now;
-      var base = cur > now ? cur : now;
-      var until;
-      if (plan.months) { var md = new Date(base.getTime()); md.setMonth(md.getMonth() + plan.months); until = md.toISOString(); }
-      else { until = new Date(base.getTime() + days * 864e5).toISOString(); }
-      return sb("profiles?id=eq." + p.user_id, { method: "PATCH", body: JSON.stringify({ verification_tier: "gold", premium_until: until }) }).then(function () {
-        return plan.promo_ads ? applyPromoAds(p, now) : null;
+  var token = "claim-" + now.getTime() + "-" + Math.floor(Math.random() * 1e9);
+  var baseMeta = (p.meta && typeof p.meta === "object") ? p.meta : {};
+  var claimMeta = Object.assign({}, baseMeta, { claim: token });
+  var observed = p.status || "pending";
+  return sb("payments?id=eq." + p.id + "&status=eq." + encodeURIComponent(observed), { method: "PATCH", body: JSON.stringify({ meta: claimMeta }) }).then(function () {
+    return sb("payments?select=meta,status&id=eq." + p.id + "&limit=1", {});
+  }).then(function (rows) {
+    var cur = rows && rows[0];
+    if (!cur || cur.status === "paid" || !cur.meta || cur.meta.claim !== token) return false;
+    var work = Promise.resolve();
+    if (p.purpose === "bump" && p.target_id) {
+      work = sb("products?id=eq." + p.target_id, { method: "PATCH", body: JSON.stringify({ bump_at: now.toISOString() }) });
+    } else if (p.purpose === "featured" && p.target_id) {
+      var exp = new Date(now.getTime() + days * 864e5).toISOString();
+      work = sb("admin_featured?select=product_id&product_id=eq." + p.target_id + "&limit=1", {}).then(function (frows) {
+        if (frows && frows.length) return sb("admin_featured?product_id=eq." + p.target_id, { method: "PATCH", body: JSON.stringify({ expires_at: exp, source: "paid" }) });
+        return sb("admin_featured", { method: "POST", body: JSON.stringify([{ product_id: p.target_id, expires_at: exp, source: "paid" }]) });
       });
+    } else if (p.purpose === "premium") {
+      work = sb("profiles?select=premium_until&id=eq." + p.user_id, {}).then(function (prows) {
+        var cur2 = prows && prows[0] && prows[0].premium_until ? new Date(prows[0].premium_until) : now;
+        var base = cur2 > now ? cur2 : now;
+        var until;
+        if (plan.months) { var md = new Date(base.getTime()); md.setMonth(md.getMonth() + plan.months); until = md.toISOString(); }
+        else { until = new Date(base.getTime() + days * 864e5).toISOString(); }
+        return sb("profiles?id=eq." + p.user_id, { method: "PATCH", body: JSON.stringify({ verification_tier: "gold", premium_until: until }) }).then(function () {
+          var pWithMeta = Object.assign({}, p, { meta: claimMeta });
+          return plan.promo_ads ? applyPromoAds(pWithMeta, now) : null;
+        });
+      });
+    }
+    // purpose "banner": nothing automatic — the paid row is the admin's fulfilment queue.
+    return work.then(function () {
+      return sb("payments?id=eq." + p.id, { method: "PATCH", body: JSON.stringify({ status: "paid", paid_at: now.toISOString(), activated_at: now.toISOString() }) });
+    }).then(function () {
+      if (p.purpose === "premium") { return referralReward(Object.assign({}, p, { meta: claimMeta })).then(function () { return true; }, function () { return true; }); }
+      return true;
     });
-  }
-  // purpose "banner": nothing automatic — the paid row is the admin's fulfilment queue.
-  return work.then(function () {
-    return sb("payments?id=eq." + p.id, { method: "PATCH", body: JSON.stringify({ status: "paid", paid_at: now.toISOString(), activated_at: now.toISOString() }) });
-  }).then(function () {
-    if (p.purpose === "premium") { return referralReward(p).then(function () { return true; }, function () { return true; }); }
-    return true;
   });
 }
 
