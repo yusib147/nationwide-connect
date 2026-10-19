@@ -1,0 +1,60 @@
+/* statusx.css — Status discovery + product tags (2026-10-19). Loaded last. */
+
+/* ------- Composer controls ------- */
+.stx-controls{margin:14px 16px 0;display:flex;flex-direction:column;gap:10px}
+.stx-tagbtn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--input,#f4f4f7);border:1.5px dashed var(--line,#d9d9e0);border-radius:14px;padding:10px 12px;cursor:pointer;color:var(--ink,#111)}
+.stx-tagbtn.has{border-style:solid;border-color:#e8380d;background:rgba(232,56,13,.06)}
+.stx-tagbtn img{width:40px;height:40px;border-radius:10px;object-fit:cover;flex:none}
+.stx-tfb{font-size:22px;flex:none}
+.stx-tmain{display:flex;flex-direction:column;min-width:0}
+.stx-tmain b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stx-tmain i{font-style:normal;font-size:12px;color:var(--muted,#777)}
+.stx-tx{margin-left:auto;font-size:20px;line-height:1;padding:4px 8px;color:#b3261e;flex:none}
+.stx-viz{display:flex;gap:10px;align-items:flex-start;background:var(--input,#f4f4f7);border-radius:14px;padding:10px 12px;cursor:pointer}
+.stx-viz input{width:19px;height:19px;flex:none;margin-top:1px;accent-color:#e8380d}
+.stx-viz span{font-size:12.5px;line-height:1.45;color:var(--ink,#111)}
+.stx-viz b{font-size:13px}
+
+/* ------- Tag picker sheet ------- */
+.stx-sheet-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.stx-sheet{background:var(--bg,#fff);color:var(--ink,#111);width:100%;max-width:560px;max-height:76dvh;border-radius:20px 20px 0 0;display:flex;flex-direction:column;overflow:hidden}
+.stx-sheet-hd{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px}
+.stx-sheet-hd b{font-size:16px}
+.stx-sheet-x{background:none;border:0;font-size:24px;line-height:1;cursor:pointer;color:var(--ink,#111);padding:4px 8px}
+.stx-sheet-list{overflow-y:auto;padding:4px 12px 18px}
+.stx-sheet-load{padding:16px 8px;font-size:13.5px;color:var(--muted,#777);line-height:1.5}
+.stx-prow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line-soft,#f1f1f4);padding:10px 6px;cursor:pointer;color:var(--ink,#111)}
+.stx-prow img,.stx-pfb{width:46px;height:46px;border-radius:10px;object-fit:cover;flex:none}
+.stx-pfb{display:flex;align-items:center;justify-content:center;background:var(--input,#f4f4f7);font-weight:800}
+.stx-pmain{display:flex;flex-direction:column;min-width:0}
+.stx-pmain b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stx-pmain i{font-style:normal;font-size:12.5px;color:#e8380d;font-weight:700}
+.stx-pgo{margin-left:auto;font-size:20px;color:var(--muted,#999)}
+
+/* ------- Viewer product chip ------- */
+.stx-chip{position:absolute;left:12px;right:12px;bottom:64px;z-index:60;display:flex;align-items:center;gap:10px;margin:0;background:rgba(20,20,22,.82);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.22);border-radius:14px;padding:8px 10px;cursor:pointer;color:#fff}
+.stx-chip img,.stx-cfb{width:42px;height:42px;border-radius:9px;object-fit:cover;flex:none}
+.stx-cfb{display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.15);font-size:19px}
+.stx-cmain{display:flex;flex-direction:column;min-width:0;flex:1}
+.stx-ct{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stx-cp{font-size:12.5px;color:#ffb59d;font-weight:700}
+.stx-chip.sold .stx-cp{color:#ff9d94}
+.stx-cchat{flex:none;background:#e8380d;color:#fff;border:0;border-radius:999px;padding:8px 16px;font-size:13.5px;font-weight:800;cursor:pointer;min-height:38px}
+.stx-cchat:disabled{opacity:.6}
+.stx-cgo{flex:none;font-size:20px;color:rgba(255,255,255,.75)}
+
+/* ------- Discover section + rails ------- */
+.stx-disc{margin:18px 0 6px}
+.stx-disc-hd{padding:0 16px}
+.stx-disc-hd h3{font-size:16px;margin:0 0 2px}
+.stx-disc-hd p{font-size:12.5px;color:var(--muted,#777);margin:0;line-height:1.45}
+.stx-rail{display:flex;gap:14px;overflow-x:auto;padding:12px 16px 6px;scrollbar-width:none}
+.stx-rail::-webkit-scrollbar{display:none}
+.stx-tagdot{font-size:11px}
+
+/* ------- Home status row ------- */
+.stx-homerow{border-bottom:1px solid var(--line-soft,#f1f1f4);padding-bottom:4px;margin-bottom:6px}
+.stx-homerow .stx-rail{padding-top:10px}
+
+.stx-cgo-btn{flex:1;display:flex;align-items:center;gap:10px;background:none;border:0;color:inherit;text-align:left;cursor:pointer;padding:0;min-width:0;font:inherit}
+.stx-cgo-btn img{width:42px;height:42px;border-radius:9px;object-fit:cover;flex:none}

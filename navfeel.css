@@ -1,0 +1,46 @@
+/* navfeel.css — page-feel layer (loaded last). */
+
+/* Loadbar */
+#nv-bar{position:fixed;top:0;left:0;height:2.5px;width:0;background:linear-gradient(90deg,#f60,#ffb37a);z-index:99999;opacity:0;pointer-events:none;border-radius:0 3px 3px 0}
+#nv-bar.nv-run{opacity:1;width:74%;transition:width .4s cubic-bezier(.2,.7,.3,1)}
+#nv-bar.nv-done{width:100%;opacity:0;transition:width .14s ease,opacity .35s ease .06s}
+
+/* Screen arrival */
+.screen.nv-enter{animation:nvPageIn .26s ease both}
+@keyframes nvPageIn{from{opacity:.35;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* Cards cascade in as they land */
+#home-grid>*,#cat-grid>*{animation:nvCardIn .38s cubic-bezier(.2,.7,.3,1) both}
+#home-grid>*:nth-child(2),#cat-grid>*:nth-child(2){animation-delay:.04s}
+#home-grid>*:nth-child(3),#cat-grid>*:nth-child(3){animation-delay:.08s}
+#home-grid>*:nth-child(4),#cat-grid>*:nth-child(4){animation-delay:.12s}
+#home-grid>*:nth-child(5),#cat-grid>*:nth-child(5){animation-delay:.16s}
+#home-grid>*:nth-child(6),#cat-grid>*:nth-child(6){animation-delay:.20s}
+#home-grid>*:nth-child(7),#cat-grid>*:nth-child(7){animation-delay:.24s}
+#home-grid>*:nth-child(8),#cat-grid>*:nth-child(8){animation-delay:.28s}
+@keyframes nvCardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* Skeleton placeholders */
+.nv-sk{border-radius:14px;overflow:hidden;background:var(--card,#fff);border:1px solid rgba(0,0,0,.05)}
+.nv-sk-ph{aspect-ratio:4/3;background:linear-gradient(100deg,rgba(0,0,0,.06) 40%,rgba(0,0,0,.12) 50%,rgba(0,0,0,.06) 60%);background-size:200% 100%;animation:nvShim 1.15s infinite linear}
+.nv-sk-lines{padding:10px 12px 14px;display:flex;flex-direction:column;gap:8px}
+.nv-sk-lines i{display:block;height:11px;border-radius:6px;background:linear-gradient(100deg,rgba(0,0,0,.06) 40%,rgba(0,0,0,.12) 50%,rgba(0,0,0,.06) 60%);background-size:200% 100%;animation:nvShim 1.15s infinite linear}
+.nv-sk-lines i.p{width:45%;height:13px}
+.nv-sk-lines i.s{width:65%}
+.nv-sk-av{width:46px;height:46px;border-radius:50%;flex:none;background:linear-gradient(100deg,rgba(0,0,0,.06) 40%,rgba(0,0,0,.12) 50%,rgba(0,0,0,.06) 60%);background-size:200% 100%;animation:nvShim 1.15s infinite linear}
+#inbox-list .nv-sk{display:flex;gap:12px;align-items:center;padding:12px 14px;margin:8px 12px}
+#inbox-list .nv-sk .nv-sk-lines{flex:1;padding:0}
+@keyframes nvShim{from{background-position:180% 0}to{background-position:-20% 0}}
+
+/* Fresh ribbon */
+.nv-new{position:absolute;top:8px;left:8px;background:#16a34a;color:#fff;font-size:10px;font-weight:800;letter-spacing:.6px;padding:3px 7px;border-radius:6px;z-index:3;box-shadow:0 2px 8px rgba(22,163,74,.4)}
+.card-photo{position:relative}
+
+/* Declutter: one badge per card, a little more air */
+.card-badges>*:nth-child(n+2){display:none!important}
+#home-grid,#cat-grid{gap:13px}
+
+@media (prefers-reduced-motion: reduce){
+  .screen.nv-enter,#home-grid>*,#cat-grid>*{animation:none!important}
+  #nv-bar{transition:none!important}
+}

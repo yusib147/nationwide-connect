@@ -1,11 +1,5 @@
-/* Nationwide Media Connect data layer.
-   DEMO MODE (localStorage) while SUPABASE_URL / SUPABASE_ANON_KEY are empty
-   in config.js. With keys set it runs in SUPABASE MODE:
-   - categories and products are read live from Supabase (seed listings are
-     merged in so the feed stays rich)
-   - auth is email + password via Supabase Auth; phone is an optional
-     profile contact field, never the login credential
-   The app calls the same functions either way. */
+/* Nationwide Media Connect data layer. Demo mode (localStorage) when
+   config.js keys are empty; Supabase mode (live data + auth) when set. */
 (function () {
   "use strict";
 
@@ -30,8 +24,7 @@
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(s || ""));
   }
 
-  /* Supabase has no SMS provider on this project yet, so any phone OTP
-     attempt fails fast with provider-disabled. Detect that and fall back. */
+  /* No SMS provider on this project yet: phone OTP fails fast; detect + fall back. */
   function otpNotConfigured(err) {
     var m = String((err && (err.message || err.msg)) || err || "").toLowerCase();
     var code = String((err && (err.code || err.error_code)) || "").toLowerCase();
@@ -58,8 +51,7 @@
     convos: "nm_convos"
   };
 
-  /* ---------- Nigerian phone normalization: 08031234567, +2348031234567,
-     2348031234567, 8031234567 -> 2348031234567 ---------- */
+  /* ---------- Nigerian phone normalization -> 234... ---------- */
   function normalizePhone(raw) {
     var d = String(raw || "").replace(/\D/g, "");
     if (d.length === 11 && d.charAt(0) === "0") { d = "234" + d.slice(1); }
@@ -145,7 +137,7 @@
     }, 2200);
   }
 
-  /* ---------- category slug map (Supabase seeds these 7 names) ---------- */
+  /* ---------- category slug map (Supabase seeds these 15 names) ---------- */
   var CAT_SLUG_BY_NAME = {
     "Vehicles": "vehicles",
     "Phones and Tablets": "phones",
@@ -185,6 +177,8 @@
       sellerId: r.seller_id || null,
       sellerTier: prof.verification_tier || null,
       status: r.status || "active",
+      quantity: r.quantity == null ? 1 : r.quantity,
+      delivery: r.delivery || "",
       aiFlagReason: r.ai_flag_reason || "",
       images: r.image_urls || [],
       bumpAt: r.bump_at ? Date.parse(r.bump_at) : 0,
@@ -277,8 +271,7 @@
     _sbUser: function () {
       var self = this;
       if (self.mode !== "supabase" || !self.client) { return Promise.resolve(null); }
-      /* Opening a chat used to fire auth.getUser() (a network round trip) 3-4
-         times in a row. Dedupe in-flight calls and reuse the result for 5s. */
+      /* Dedupe in-flight auth.getUser() calls; reuse the result for 5s. */
       var now = Date.now();
       if (self._sbU && now - self._sbU.at < 5000) { return Promise.resolve(self._sbU.u); }
       if (self._sbUP) { return self._sbUP; }
@@ -769,7 +762,9 @@
             description: data.description,
             location: data.location || "",
             condition: data.condition || "Used",
-            status: "active"
+            status: "active",
+            quantity: Math.max(0, parseInt(data.quantity, 10) || 1),
+            delivery: data.delivery || ""
           };
           if (data.subcategory) { row.subcategory = data.subcategory; }
           return self.client.from("products").insert(row).select("id").single()
@@ -1316,7 +1311,7 @@
     getProfileById: function (userId) {
       var self = this;
       if (self.mode !== "supabase" || !self.client || !isUuid(userId)) { return Promise.resolve(null); }
-      return self.client.from("profiles").select("id,display_name,phone,address,avatar_url,verification_tier,created_at,bio").eq("id", userId).maybeSingle().then(function (res) {
+      return self.client.from("profiles").select("id,display_name,phone,address,avatar_url,verification_tier,created_at,bio,cover_url,business_hours,state,lga").eq("id", userId).maybeSingle().then(function (res) {
         if (res.error || !res.data) { return null; }
         return res.data;
       });
@@ -1911,7 +1906,7 @@ DB.followingProfiles = function () {
 };
 
 /* ----- Statuses (WhatsApp-style, follower-only via RLS) ----- */
-DB._statusCols = "id,user_id,kind,media_urls,caption,captions,created_at,expires_at";
+DB._statusCols = "id,user_id,kind,media_urls,caption,captions,created_at,expires_at,product_id,visibility";
 DB.listStatuses = function (userIds) {
   var self = this;
   if (self.mode !== "supabase" || !self.client || !userIds || !userIds.length) { return Promise.resolve([]); }
@@ -1924,7 +1919,7 @@ DB.myStatuses = function () {
   var self = this;
   return self._needLogin().then(function (u) { return self.listStatuses([u.id]); });
 };
-DB.postStatus = function (files, caption) {
+DB.postStatus = function (files, caption, opts) {
   /* files: array of {file, kind} where kind = 'image'|'video'. */
   var self = this;
   return self._needLogin().then(function (u) {
@@ -1950,7 +1945,7 @@ DB.postStatus = function (files, caption) {
     });
     return chain.then(function () {
       return self.client.from("statuses").insert({
-        user_id: u.id, kind: kind, media_urls: urls, caption: String(caps[0] || "").slice(0, 300), captions: list.map(function (f, i) { return String(caps[i] || "").slice(0, 300); })
+        user_id: u.id, kind: kind, media_urls: urls, product_id: (opts && opts.product_id) || null, visibility: (opts && opts.visibility) || "followers", caption: String(caps[0] || "").slice(0, 300), captions: list.map(function (f, i) { return String(caps[i] || "").slice(0, 300); })
       }).select(self._statusCols).single();
     }).then(function (res) {
       if (res.error) { throw res.error; }
@@ -2020,9 +2015,9 @@ window.NM_DB = DB;
       (function attempt() {
         DB.verifyPayment(ref).then(function (j) {
           if (j && j.ok && j.status === "paid") {
-            if (j.purpose === "premium") { payToast((j.plan === "premium_promo_2m" || j.plan === "premium_1m") ? "Promo Premium active for 2 months. Your current listings have been boosted free. Thank you!" : "Premium active. You can now post unlimited listings. Thank you!", 1); }
-            else if (j.purpose === "bump") { payToast("Payment confirmed. Your listing was bumped.", 1); }
-            else if (j.purpose === "featured") { payToast("Payment confirmed. Your listing is now featured.", 1); }
+            if (j.purpose === "premium") { payToast((j.plan === "premium_promo_2m" || j.plan === "premium_1m") ? "Promo Premium active for 2 months. Your current listings got a free ad boost. Thank you!" : "Premium active. You can now post unlimited listings. Thank you!", 1); }
+            else if (j.purpose === "bump") { payToast("Payment confirmed. Your listing has been promoted to the top.", 1); }
+            else if (j.purpose === "featured") { payToast("Payment confirmed. Your listing is now featured for 2 weeks.", 1); }
             else if (j.purpose === "banner") { payToast("Payment confirmed. Your banner will be placed within one working day.", 1); }
             else { payToast("Payment confirmed. Thank you!", 1); }
           } else if (j && j.ok) { payToast("Payment was not completed. No charge was confirmed.", 0); }

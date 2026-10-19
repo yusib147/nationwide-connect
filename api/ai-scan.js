@@ -1,4 +1,4 @@
-// Nationwide Connect — same-origin proxy for the AI anti-scam Edge Functions.
+// Nationwide Media Connect — same-origin proxy for the AI anti-scam Edge Functions.
 // Browsers cannot call the Supabase functions directly (CORS preflight is
 // rejected), so the storefront calls /api/ai-scan and this route forwards
 // server-side with the public anon key.

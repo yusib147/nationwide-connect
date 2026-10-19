@@ -1,4 +1,4 @@
-// Shared helpers for Nationwide Connect Paystack payments.
+// Shared helpers for Nationwide Media Connect Paystack payments.
 // Server-side only. The Paystack SECRET key lives in the Vercel env (PAYSTACK_SECRET_KEY)
 // and must never reach the browser or chat.
 var SUPABASE_URL = "https://qxcifjxytdixiolvkmtv.supabase.co";
@@ -9,11 +9,11 @@ var SITE = "https://nationwide-connect-demo1-skepterforge1471-8639s-projects.ver
 // Server-side price list. The client NEVER sets the amount.
 var PLANS = {
   bump_1:      { purpose: "bump",     label: "Bump listing",        amount_kobo: 100000,  days: 0 },
-  featured_7d: { purpose: "featured", label: "Featured 7 days",     amount_kobo: 500000,  days: 7 },
+  featured_7d: { purpose: "featured", label: "Featured 2 weeks",    amount_kobo: 500000,  days: 14 },
   premium_1m:  { purpose: "premium",  label: "Launch promo Premium 2 months + free listing ad boost", amount_kobo: 100000, months: 2, promo_ads: true },
   premium_promo_2m: { purpose: "premium", label: "Launch promo Premium 2 months + free listing ad boost", amount_kobo: 100000, months: 2, promo_ads: true },
   premium_6m:  { purpose: "premium",  label: "Premium 6 months", amount_kobo: 500000, months: 6 },
-  banner_30d:  { purpose: "banner",   label: "Home banner 1 month", amount_kobo: 1000000, days: 30 }
+  banner_30d:  { purpose: "banner",   label: "Home banner 2 weeks", amount_kobo: 500000, days: 14 }
 };
 
 function sb(path, opts) {
@@ -134,8 +134,11 @@ function verifyAndFulfill(reference) {
 // Rewards are created ONLY here, inside fulfilment of a verified external
 // payment. Splits (Ibrahim's spec, kobo): a N1,000 premium payment pays the
 // referrer N250 cash + N250 service credit; N5,000 pays N750 cash + N250
-// credit. One reward per referred account EVER; unique payment_ref and
-// ledger idempotency keys make replays harmless. Any fraud signal holds the
+// credit. Ibrahim's rule (2026-10-18): the N5,000 tier earns on EVERY
+// verified payment by the referral; the N1,000 tier earns ONCE per
+// referred account (first N1,000 payment only). Unique payment_ref and
+// ledger idempotency keys make a replay of the SAME payment harmless.
+// Any fraud signal holds the
 // reward (status "held", no ledger entries) for admin review instead of
 // crediting it. Wallet-paid purchases never create rewards (meta.method).
 var REWARD_BY_AMOUNT = { 100000: { cash: 25000, credit: 25000 }, 500000: { cash: 75000, credit: 25000 } };
@@ -167,8 +170,11 @@ function referralReward(p) {
     var payer = rows && rows[0];
     if (!payer || !payer.referred_by) return null;
     var referrerId = payer.referred_by;
-    return sb("referral_rewards?select=id&referred_user_id=eq." + p.user_id, {}).then(function (existing) {
-      if (existing && existing.length) return null;
+    return sb("referral_rewards?select=id,amount_paid_kobo&referred_user_id=eq." + p.user_id, {}).then(function (existing) {
+      // Ibrahim's rule (2026-10-18): the N1,000 tier earns ONCE per referred
+      // account (its first N1,000 payment only); the N5,000 tier earns on
+      // EVERY payment. A partial unique index in the DB backs the N1,000 cap.
+      if (Number(p.amount_kobo) === 100000 && existing && existing.some(function (r) { return Number(r.amount_paid_kobo) === 100000; })) return null;
       var flags = [];
       var checks = [];
       if (referrerId === p.user_id) flags.push("self_referral");

@@ -137,7 +137,6 @@
       + '<select class="nm-lga-sel" id="nm-lga-state" aria-label="Your state"><option value="">Select state</option>'
       + window.NM_LGA_STATES.map(function (s) { return '<option value="' + s + '">' + s + "</option>"; }).join("")
       + '</select>'
-      + '<input class="nm-lga-sel" id="nm-lga-q" type="search" placeholder="Search your LGA" aria-label="Search your LGA">'
       + '<select class="nm-lga-sel" id="nm-lga-lga" aria-label="Your local government area" disabled><option value="">Select state first</option></select>'
       + '<div class="nm-lga-hd">Exact location (optional)</div>'
       + '<input class="nm-lga-sel" id="nm-lga-addr" type="text" maxlength="140" placeholder="e.g. 14 Allen Avenue, or a nearby landmark" aria-label="Your exact location">'
@@ -145,9 +144,8 @@
       + '<button type="button" class="loc-btn primary" id="nm-lga-save">Save location</button>';
     var saveBtn = form.querySelector('button[type="submit"], .btn-primary');
     if (saveBtn && saveBtn.parentNode === form) { form.insertBefore(block, saveBtn); } else { form.appendChild(block); }
-    var stateSel = $("#nm-lga-state", block), lgaSel = $("#nm-lga-lga", block), qSel = $("#nm-lga-q", block);
-    stateSel.addEventListener("change", function () { buildLgaOptions(lgaSel, stateSel.value, "", qSel ? qSel.value : ""); });
-    if (qSel) { qSel.addEventListener("input", function () { buildLgaOptions(lgaSel, stateSel.value, lgaSel.value, qSel.value); }); }
+    var stateSel = $("#nm-lga-state", block), lgaSel = $("#nm-lga-lga", block);
+    stateSel.addEventListener("change", function () { buildLgaOptions(lgaSel, stateSel.value, "", ""); });
     block.querySelector("#nm-lga-save").addEventListener("click", function () {
       var state = stateSel.value, lga = lgaSel.value;
       if (!state || !lga) { toast("Please choose your state and your LGA first."); return; }

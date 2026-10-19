@@ -2,7 +2,7 @@
    Every Me sub-menu becomes a mini selection listed under the name tag; each
    selection opens its own minimal page. Content is gathered fresh at the
    moment a page is opened (and put back when it closes), with a short loading
-   animation while the page opens. Grow your business (the ₦10,000 home page
+   animation while the page opens. Grow your business (the ₦5,000 home page
    banner payment) and Get Premium are separate selections. Refer & Earn is
    emphasized in the list and gets a floating, dancing button at the top bar
    on every main menu. */
@@ -22,6 +22,7 @@
   + "@keyframes nmReferPulse{0%,100%{box-shadow:0 8px 22px rgba(232,56,13,.35)}50%{box-shadow:0 8px 30px rgba(232,56,13,.6)}}"
   + ".nm-me-row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font-family:inherit;cursor:pointer;color:var(--ink);background:var(--chrome);border:1px solid var(--line-soft);border-radius:14px;padding:11px 14px;box-shadow:var(--shadow-card)}"
   + ".nm-me-row .nm-me-ico{width:34px;height:34px;flex:none;border-radius:10px;background:rgba(232,56,13,.12);display:flex;align-items:center;justify-content:center;font-size:17px}"
+  + ".nm-me-row{min-height:44px}"
   + ".nm-me-row b{flex:1;font-size:14px;font-weight:700}"
   + ".nm-me-row .nm-me-chev{color:var(--muted);font-size:19px;font-weight:800}"
   + ".nm-me-badge{min-width:22px;height:22px;padding:0 6px;border-radius:99px;background:var(--acc);color:#fff;font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center}"
@@ -48,7 +49,7 @@
   + "@keyframes nmShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}"
   + ".nm-empty-note{padding:26px 12px;text-align:center;color:var(--muted);font-size:13.5px;line-height:1.5}"
   + ".nm-prem-line{margin-top:2px;width:100%;border:0;background:transparent;cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--muted);text-align:center;padding:8px 4px}"
-  + "#nm-refer-fab{position:fixed;top:calc(env(safe-area-inset-top,0px) + 58px);right:10px;z-index:99985;display:none;align-items:center;gap:6px;border:0;cursor:pointer;font-family:inherit;font-size:12px;font-weight:800;color:#fff;background:linear-gradient(135deg,#e8380d,#ff7a18);border-radius:999px;padding:8px 13px;box-shadow:0 8px 20px rgba(232,56,13,.45);animation:nmFabDance 2.6s ease-in-out infinite}"
+  + "#nm-refer-fab{position:fixed;top:auto;bottom:calc(88px + env(safe-area-inset-bottom,0px));right:12px;z-index:99985;display:none;align-items:center;gap:6px;border:0;cursor:pointer;font-family:inherit;font-size:12px;font-weight:800;color:#fff;background:linear-gradient(135deg,#e8380d,#ff7a18);border-radius:999px;padding:8px 13px;min-height:44px;box-shadow:0 8px 20px rgba(232,56,13,.45);animation:nmFabDance 2.6s ease-in-out infinite}"
   + "#nm-refer-fab.show{display:flex}"
   + "#nm-refer-fab:active{transform:scale(.94)}"
   + "@keyframes nmFabDance{0%,100%{transform:rotate(-4deg) translateY(0)}25%{transform:rotate(4deg) translateY(-4px)}50%{transform:rotate(-3deg) translateY(0)}75%{transform:rotate(3deg) translateY(-3px)}}"
@@ -63,11 +64,22 @@
   + ".nm-banner li{font-size:13px;font-weight:700;margin-top:6px}"
   + ".nm-banner li::before{content:'\\2713  '}"
   + ".nm-banner .nm-b-price{display:inline-block;margin-top:12px;background:rgba(255,255,255,.22);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:800}"
+  + ".nm-banner .nm-b-next{margin-top:10px;font-size:12.5px;line-height:1.55;opacity:.95}"
+  + ".nm-banner .nm-b-next b{font-weight:800}"
   + ".nm-banner-grow{background:linear-gradient(135deg,#0d7a3f,#1cab55 55%,#35c26e)}"
   + ".nm-banner-prem{background:linear-gradient(135deg,#e8380d,#ff7a18 60%,#ffa41c)}"
   + ".nm-banner::after{content:'';position:absolute;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.14);right:-60px;top:-70px;pointer-events:none}"
   + ".nm-mepage-body #me-advertise,.nm-mepage-body #me-premium{padding:14px;font-size:15px;font-weight:800;border-radius:14px}"
-  + "@media (prefers-reduced-motion: reduce){#nm-refer-fab,.nm-me-refer,.nm-load-dots span,.nm-skel i{animation:none}}";
+  + "@media (prefers-reduced-motion: reduce){#nm-refer-fab,.nm-me-refer,.nm-load-dots span,.nm-skel i{animation:none}}"
+  + "@media (min-width:1024px){#nm-premium{align-items:center!important}#nm-premium>div{border-radius:20px!important}}"
+  + ".nm-help{background:var(--chrome);border:1px solid var(--line-soft);border-radius:16px;padding:18px 16px;color:var(--ink)}"
+  + ".nm-help h3{margin:0 0 4px;font-size:17px;font-weight:800}"
+  + ".nm-help .nm-help-sec{margin:14px 0 0}"
+  + ".nm-help .nm-help-sec:first-of-type{margin-top:10px}"
+  + ".nm-help h4{margin:0 0 6px;font-size:14px;font-weight:800;color:var(--acc)}"
+  + ".nm-help p{margin:6px 0;font-size:13.5px;line-height:1.55}"
+  + ".nm-help ul{margin:6px 0 0;padding:0 0 0 18px;font-size:13.5px;line-height:1.6}"
+  + ".nm-help .nm-help-wa{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;padding:12px 18px;min-height:44px;border-radius:12px;background:#22c55e;color:#fff;font-weight:800;font-size:14px;text-decoration:none}";
   var st = document.createElement("style");
   st.id = "nm-me-pages";
   st.textContent = css;
@@ -112,11 +124,30 @@
     { key: "profile", title: "Edit profile", icon: "\u270F\uFE0F",
       nodes: function () { return pickIds(["me-sec-profile"]); }, prep: openDetails },
     { key: "grow", title: "Grow your business", icon: "\u{1F4C8}", bannerCls: "nm-banner-grow",
-      banner: '<div class="nm-b-ico">\u{1F4E3}</div><h3>Put your business on the home page</h3><p>Every buyer who opens Nationwide Media Connect lands on the home page first. Your banner sits in that space for 30 days, in front of everyone who visits.</p><ul><li>Your business in the home page banner space</li><li>Runs for a full 30 days</li><li>One payment, no daily posting stress</li></ul><span class="nm-b-price">\u20A610,000 \u00B7 30 days</span>',
+      banner: '<div class="nm-b-ico">\u{1F4E3}</div><h3>Put your business on the home page</h3><p>Every buyer who opens Nationwide Media Connect lands on the home page first. Your banner sits in that space for 2 weeks, in front of everyone who visits.</p><ul><li>Your business in the home page banner space</li><li>Runs for a full 2 weeks</li><li>One payment, no daily posting stress</li></ul><span class="nm-b-price">\u20A65,000 \u00B7 2 weeks</span><p class="nm-b-next">After payment, upload your banner artwork right here: a <b>video of at most 20 seconds</b> or <b>1 or 2 pictures</b>. We review it, and it goes live for 2 weeks once approved.</p>',
       nodes: function () { return pickIds(["me-advertise"]); } },
     { key: "premium", title: "Get Premium", icon: "\u{1F451}", bannerCls: "nm-banner-prem",
-      banner: '<div class="nm-b-ico">\u{1F451}</div><h3>Sell without limits</h3><p>A free account stops at 3 listings. Premium removes the cap completely, so everything you have for sale can be live at the same time.</p><ul><li>Unlimited listings</li><li>Launch offer: 2 months for \u20A61,000</li><li>Your listings get boosted on the launch plan</li></ul><span class="nm-b-price">From \u20A61,000</span>',
-      nodes: function () { return pickIds(["me-premium"]); } }
+      banner: '<div class="nm-b-ico">\u{1F451}</div><h3>Sell without limits</h3><p>A free account stops at 3 listings. Premium removes the cap completely, so everything you have for sale can be live at the same time.</p><ul><li>Unlimited listings</li><li>Launch promo: 2 months for \u20A61,000, with a free ad boost on your listings</li><li>Or 6 months for \u20A65,000, no renewing every few weeks</li></ul><span class="nm-b-price">\u20A61,000 \u00B7 2 months &nbsp;|&nbsp; \u20A65,000 \u00B7 6 months</span>',
+      nodes: function () { return pickIds(["me-premium"]); } },
+    { key: "help", title: "Help & safety", icon: "\u{1F6E1}\uFE0F",
+      /* Static page: no gathered nodes. The nm-own class makes closePage
+         remove the element from the slot, so open/close cycles leave
+         #me-body exactly as found. */
+      helpHtml: '<h3>Help &amp; safety</h3>'
+        + '<div class="nm-help-sec"><h4>How selling works</h4>'
+        + '<p>Listing an item is free: every account gets <b>3 free listings</b>. If you need more, <b>Premium</b> removes the cap completely.</p>'
+        + '<ul><li>Tap <b>Sell an item</b> in the Me menu, add photos and a fair price.</li>'
+        + '<li>Buyers message you in the app: keep the whole deal in the chat.</li>'
+        + '<li>Meet in a public place and inspect the item before you pay.</li></ul></div>'
+        + '<div class="nm-help-sec"><h4>How to stay safe</h4>'
+        + '<ul><li>Meet in a <b>public place</b> and inspect the item before you pay.</li>'
+        + '<li><b>Never pay in advance</b> for delivery, or to hold an item.</li>'
+        + '<li>Keep chats inside the app: offers outside the app cannot be moderated.</li>'
+        + '<li>Watch for pressure: rush, secrecy, extra fees, or OTP and bank-detail requests.</li></ul></div>'
+        + '<div class="nm-help-sec"><h4>Need help?</h4>'
+        + '<p>Message us on WhatsApp and a real person answers:</p>'
+        + '<a class="nm-help-wa" href="https://wa.me/2349150951870" target="_blank" rel="noopener">Chat 09150951870 on WhatsApp</a></div>',
+      nodes: function () { return []; } }
   ];
 
   /* ---------- page overlay ---------- */
@@ -180,6 +211,17 @@
         pg._bannerEl = bd;
       }
       slot.insertBefore(pg._bannerEl, slot.firstChild);
+    }
+    /* Static content pages (Help & safety): built once, reused. The nm-own
+       class makes closePage remove it from the slot on close. */
+    if (pg.helpHtml) {
+      if (!pg._helpEl) {
+        var hd = document.createElement("div");
+        hd.className = "nm-help nm-own";
+        hd.innerHTML = pg.helpHtml;
+        pg._helpEl = hd;
+      }
+      slot.insertBefore(pg._helpEl, slot.firstChild);
     }
     /* A friendly note when there is genuinely nothing to show. */
     var note = slot.querySelector(".nm-empty-note");
@@ -323,9 +365,15 @@
     var ref = document.createElement("button");
     ref.type = "button";
     ref.className = "nm-me-refer";
-    ref.innerHTML = '<span class="nm-me-rico">\u{1F381}</span><span style="flex:1"><b>Refer &amp; Earn</b><span>Earn up to \u20A61,000 for every friend who goes Premium</span></span><span class="nm-me-chev">\u203A</span>';
+    ref.innerHTML = '<span class="nm-me-rico">\u{1F381}</span><span style="flex:1"><b>Refer &amp; Earn</b><span>Friend pays \u20A61,000 Premium, you earn \u20A6250 cash + \u20A6250 credit. Friend pays \u20A65,000, you earn \u20A6750 cash + \u20A6250 credit</span></span><span class="nm-me-chev">\u203A</span>';
     ref.addEventListener("click", goRefer);
     menu.appendChild(ref);
+    var bn = document.createElement("button");
+    bn.type = "button";
+    bn.className = "nm-me-row";
+    bn.innerHTML = '<span class="nm-me-ico">🖼️</span><b>My banner ads</b><span class="nm-me-chev">›</span>';
+    bn.addEventListener("click", function () { if (window.NM_openBannerSubmit) { window.NM_openBannerSubmit(); } });
+    menu.appendChild(bn);
     PAGES.forEach(function (pg) {
       var row = document.createElement("button");
       row.type = "button";
@@ -667,6 +715,44 @@
     } catch (e) {}
   }
 
+  /* Disposable-email block on the signup form (2026-10-18 critique fix:
+     trust holes). A modest list of well-known temp-mail providers.
+     Capture-phase listener on document so it runs BEFORE the app's own
+     signup handler and the ref-code listener; stopImmediatePropagation
+     keeps the submit from firing any of them. This raises the bar only:
+     it cannot stop plus-addressing or fresh disposable domains. */
+  var DISPOSABLE_DOMAINS = ["mailinator.com", "guerrillamail.com", "10minutemail.com",
+    "tempmail.com", "temp-mail.org", "yopmail.com", "trashmail.com", "sharklasers.com",
+    "getnada.com", "maildrop.cc", "dispostable.com", "fakeinbox.com", "mohmal.com",
+    "emailondeck.com", "throwawaymail.com"];
+  window.__nmDisposableBlocked = function (email) {
+    var m = String(email || "").trim().toLowerCase().match(/@([a-z0-9.-]+\.[a-z]{2,})$/);
+    if (!m) { return false; }
+    var d = m[1];
+    return DISPOSABLE_DOMAINS.some(function (x) { return d === x || d.slice(-(x.length + 1)) === "." + x; });
+  };
+  function armDisposable() {
+    try {
+      if (window.__nmDispArmed) { return; }
+      window.__nmDispArmed = 1;
+      document.addEventListener("submit", function (e) {
+        try {
+          var f = e.target;
+          if (!f || f.id !== "form-signup") { return; }
+          var inp = document.getElementById("signup-email");
+          if (!inp || !window.__nmDisposableBlocked(inp.value)) { return; }
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          var err = document.getElementById("auth-error");
+          if (err) {
+            err.textContent = "Please use a permanent email address \u2014 disposable inboxes can't be used to sign up.";
+            err.hidden = false;
+          }
+        } catch (err) {}
+      }, true);
+    } catch (e) {}
+  }
+
   /* #118b — apply the saved subcategory the moment Sell opens, twice,
      so late form fills cannot leave the placeholder showing */
   var sellObs = null;
@@ -700,9 +786,38 @@
     armSellObserver();
     armTerms();
     armMeSaveBlur();
+    armDisposable();
     wrapAnswerOffer();
     setTimeout(addEyes, 1500);
     setInterval(tick, 1200);
     if (/[?&]pay=return/.test(location.search)) { setTimeout(checkPremium, 3000); }
   });
+})();
+
+/* ===== auth tab wiring (PASS 4+5 audit 2026-10-18) =====
+   The Log in / Sign up tabs on the auth screen had no click handlers, so the
+   signup form could never be reached. Wire the tabs to toggle the forms. */
+(function () {
+  "use strict";
+  function show(which) {
+    var tl = document.getElementById("tab-login"), ts = document.getElementById("tab-signup");
+    var fl = document.getElementById("form-login"), fs = document.getElementById("form-signup"), ff = document.getElementById("form-forgot");
+    if (fl) { fl.hidden = which !== "login"; }
+    if (fs) { fs.hidden = which !== "signup"; }
+    if (ff) { ff.hidden = true; }
+    if (tl) { tl.classList.toggle("active", which === "login"); }
+    if (ts) { ts.classList.toggle("active", which === "signup"); }
+    try { var er = document.getElementById("auth-error"); if (er) { er.hidden = true; } } catch (e) {}
+  }
+  window.NM_authTab = show;
+  function wire() {
+    var tl = document.getElementById("tab-login"), ts = document.getElementById("tab-signup");
+    if (!tl || !ts || tl._nmTabWired) { return; }
+    tl._nmTabWired = ts._nmTabWired = true;
+    tl.addEventListener("click", function () { show("login"); });
+    ts.addEventListener("click", function () { show("signup"); });
+  }
+  if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", wire); } else { wire(); }
+  setTimeout(wire, 1500);
+  setTimeout(wire, 4000);
 })();

@@ -10,8 +10,8 @@
    unique index and the server cross-checks before and after assigning. */
 ;(function () {
   "use strict";
-  var PRICES = { bump_1: 100000, featured_7d: 500000, premium_1m: 100000, premium_promo_2m: 100000, premium_6m: 500000, banner_30d: 1000000 };
-  var LABELS = { bump_1: "Bump listing", featured_7d: "Featured 7 days", premium_1m: "Premium", premium_promo_2m: "Launch promo Premium", premium_6m: "Premium 6 months", banner_30d: "Home banner 1 month" };
+  var PRICES = { bump_1: 100000, featured_7d: 500000, premium_1m: 100000, premium_promo_2m: 100000, premium_6m: 500000, banner_30d: 500000 };
+  var LABELS = { bump_1: "Promote listing", featured_7d: "Featured 2 weeks", premium_1m: "Premium", premium_promo_2m: "Launch promo Premium", premium_6m: "Premium 6 months", banner_30d: "Home banner 2 weeks" };
   function $(s, r) { return (r || document).querySelector(s); }
   function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
   function naira(k) { return "₦" + (Math.max(0, Number(k) || 0) / 100).toLocaleString("en-NG", { maximumFractionDigits: 0 }); }
@@ -62,7 +62,12 @@
       + ".nm-ref-person small{display:block;color:var(--muted);font-weight:600;font-size:12px}"
       + ".nm-ref-chip{flex:none;font-size:11px;font-weight:800;border-radius:99px;padding:4px 9px;background:var(--acc-soft);color:var(--muted)}"
       + ".nm-ref-chip.prem{background:#e7f8ee;color:#0d7a3d}"
-      + ".nm-ref-chip.held{background:#fdf0e2;color:#9a5b13}";
+      + ".nm-ref-chip.held{background:#fdf0e2;color:#9a5b13}"
+      + ".nm-ref-plans{display:flex;flex-direction:column;gap:10px;margin:10px 0}"
+      + ".nm-ref-plan{border:1.5px solid var(--line);border-radius:14px;padding:12px 13px}"
+      + ".nm-ref-plan h4{margin:0 0 6px;font-size:14.5px;font-weight:800;color:var(--ink)}"
+      + ".nm-ref-plan ul{margin:0 0 8px;padding:0 0 0 16px;font-size:12.5px;color:var(--muted);line-height:1.55}"
+      + ".nm-ref-earn{font-size:13px;font-weight:800;color:var(--ink);background:var(--acc-soft);border-radius:10px;padding:8px 10px;line-height:1.55}";
     document.head.appendChild(st);
   } catch (e) {}
 
@@ -122,6 +127,12 @@
       else { window.open("https://wa.me/?text=" + encodeURIComponent(shareTextFor(j)), "_blank"); }
     });
   }
+  function plansHTML() {
+    return '<div class="nm-ref-plans">'
+      + '<div class="nm-ref-plan"><h4>\u20A61,000 Premium \u00B7 Launch promo, 2 months</h4><ul><li>Your friend gets unlimited listings for 2 months</li><li>Gold Premium badge on their profile and listings</li><li>Free ad boost on the listings they already have</li></ul><div class="nm-ref-earn">You earn \u20A6250 cash + \u20A6250 wallet credit<br><span style="font-weight:600">Once per friend, the first time they pay this plan.</span></div></div>'
+      + '<div class="nm-ref-plan"><h4>\u20A65,000 Premium \u00B7 6 months</h4><ul><li>Your friend gets unlimited listings for 6 months</li><li>Gold Premium badge on their profile and listings</li><li>Six months covered in one payment, no renewing every few weeks</li></ul><div class="nm-ref-earn">You earn \u20A6750 cash + \u20A6250 wallet credit<br><span style="font-weight:600">Every time they pay this plan.</span></div></div>'
+      + "</div>";
+  }
   function fundsHTML(j) {
     var pct = Math.min(100, Math.round((j.cashAvailableKobo / j.minWithdrawKobo) * 100));
     return '<div class="nm-ref-bal"><span>Cash balance</span><span>' + naira(j.cashKobo) + "</span></div>"
@@ -129,7 +140,7 @@
       + '<div class="nm-ref-bar"><i style="width:' + pct + '%"></i></div>'
       + '<p class="nm-ref-sub" style="margin:0 0 6px">' + pct + "% of the ₦1,000 withdrawal minimum. Cash clears 7 days after it is earned.</p>"
       + '<div class="nm-ref-bal"><span>Wallet credit</span><span>' + naira(j.creditKobo) + "</span></div>"
-      + '<p class="nm-ref-sub" style="margin:6px 0 0">Wallet credit pays for promotions and other services inside the app.</p>';
+      + '<p class="nm-ref-sub" style="margin:6px 0 0">Wallet credit pays for promotions and other services inside the app. Paying with wallet credit does not create referral rewards.</p>';
   }
 
   /* ---------- Me card (entry point) ---------- */
@@ -138,7 +149,7 @@
     getSummary(true).then(function (j) {
       if (!j || !j.ok) { box.innerHTML = '<h3>Refer & Earn</h3><p class="nm-ref-sub">Could not load your referral details right now.</p>'; return; }
       box.innerHTML = "<h3>Refer & Earn</h3>"
-        + '<p class="nm-ref-sub">When someone you referred subscribes to Premium, you earn cash plus wallet credit. Manage everything in your referral dashboard.</p>'
+        + '<p class="nm-ref-sub">Your friend pays \u20A61,000 Premium, you earn \u20A6250 cash + \u20A6250 credit. Your friend pays \u20A65,000 Premium, you earn \u20A6750 cash + \u20A6250 credit. Both plans are in your referral dashboard.</p>'
         + codeRowHTML(j)
         + '<div class="nm-ref-stats"><div class="nm-ref-stat"><b>' + j.referredCount + '</b><span>People referred</span></div><div class="nm-ref-stat"><b>' + naira(j.cashAvailableKobo) + '</b><span>Cash available</span></div><div class="nm-ref-stat"><b>' + naira(j.creditKobo) + '</b><span>Wallet credit</span></div></div>'
         + '<button type="button" class="nm-ref-btn" id="nm-ref-open" style="width:100%">Open Refer & Earn dashboard</button>';
@@ -184,7 +195,12 @@
       var people = (j.people || []).map(function (p) {
         var chip = p.reward_status === "held" ? '<span class="nm-ref-chip held">Under review</span>'
           : p.premium ? '<span class="nm-ref-chip prem">Premium ✓</span>' : '<span class="nm-ref-chip">Not yet premium</span>';
-        return '<div class="nm-ref-person"><div>' + esc(p.name) + "<small>Joined " + fmtDate(p.joined_at) + "</small></div>" + chip + "</div>";
+        var detail = "";
+        if (p.paid_amount_kobo) {
+          var planName = Number(p.paid_amount_kobo) === 500000 ? "\u20A65,000 Premium \u00B7 6 months" : Number(p.paid_amount_kobo) === 100000 ? "\u20A61,000 Premium \u00B7 2 months" : "Premium";
+          detail = "<small>Paid " + planName + (p.reward_count > 1 ? " \u00B7 " + p.reward_count + " payments" : "") + " \u00B7 You earned " + naira(p.earned_cash_kobo) + " cash + " + naira(p.earned_credit_kobo) + " credit</small>";
+        }
+        return '<div class="nm-ref-person"><div>' + esc(p.name) + "<small>Joined " + fmtDate(p.joined_at) + "</small>" + detail + "</div>" + chip + "</div>";
       }).join("");
       var hist = (j.history || []).map(function (r) {
         return "<div><span>" + esc(reasonText(r)) + "</span><b>" + (r.amount_kobo < 0 ? "−" : "+") + naira(Math.abs(r.amount_kobo)) + "</b></div>";
@@ -194,7 +210,7 @@
       }).join("");
       var canWd = j.cashAvailableKobo >= j.minWithdrawKobo;
       host.innerHTML = ""
-        + '<div class="nm-ref-sec"><h3>Your referral code</h3><p class="nm-ref-sub">Your code belongs to you alone. A friend must use it when they sign up, and you earn when they subscribe to Premium: ₦250 cash plus ₦250 wallet credit on the ₦1,000 plan, ₦750 cash plus ₦250 wallet credit on the ₦5,000 plan.</p>' + codeRowHTML(j) + "</div>"
+        + '<div class="nm-ref-sec"><h3>Your referral code</h3><p class="nm-ref-sub">Your code belongs to you alone. A friend must use it when they sign up. You earn based on the Premium plan your friend pays for:</p>' + plansHTML() + '<p class="nm-ref-sub">Rewards only count when your friend pays with card or transfer. Paying with wallet credit does not create a reward.</p>' + codeRowHTML(j) + "</div>"
         + '<div class="nm-ref-sec"><h3>Your funds</h3>' + fundsHTML(j) + "</div>"
         + '<div class="nm-ref-sec"><h3>Withdraw cash</h3><p class="nm-ref-sub">Withdrawals are reviewed and paid to your bank account. Minimum ' + naira(j.minWithdrawKobo) + ", available now: <b>" + naira(j.cashAvailableKobo) + "</b>.</p>"
         + '<input class="nm-ref-in" id="nm-ref-amt" type="number" inputmode="numeric" placeholder="Amount in naira (minimum 1000)">'
@@ -261,8 +277,16 @@
             api("walletpay", { plan: plan, target_id: targetId || null, idem: idem }).then(function (r) {
               if (r && r.ok) {
                 close();
-                toast("Paid with wallet credit. " + (LABELS[plan] || "Your service") + " is now active.");
                 summaryCache = null;
+                /* Banner payments are never "active" automatically: the buyer
+                   must send artwork for admin setup, same as card payments. */
+                if ((plan || "").indexOf("banner") >= 0) {
+                  if (window.NM_bannerDoneSheet) { try { window.NM_bannerDoneSheet(); } catch (e) {} }
+                  else { toast("Paid with wallet credit. Send your banner artwork to WhatsApp 09150951870 and it goes live on the home page for 2 weeks."); }
+                  resolve(r);
+                  return;
+                }
+                toast("Paid with wallet credit. " + (LABELS[plan] || "Your service") + " is now active.");
                 setTimeout(function () { try { location.reload(); } catch (e) {} }, 1300);
                 resolve(r);
               } else {

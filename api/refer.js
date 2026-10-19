@@ -1,4 +1,4 @@
-// Nationwide Connect — Refer & Earn API (server-side, service role).
+// Nationwide Media Connect — Refer & Earn API (server-side, service role).
 // POST { token, action, ... } with the caller's Supabase session token.
 // Actions: attach (lock a referral code onto a brand-new account), mycode
 // (get or generate the caller's referral code), summary (balances, stats,
@@ -103,14 +103,24 @@ module.exports = async function (req, res) {
       (data[4] || []).forEach(function (w) { if (w.status === "requested") requested += Number(w.amount_kobo) || 0; });
       var history = (data[3] || []).slice(-12).reverse();
       var rewardByReferred = {};
-      (data[2] || []).forEach(function (r) { rewardByReferred[r.referred_user_id] = r; });
+      (data[2] || []).forEach(function (r) {
+        var a = rewardByReferred[r.referred_user_id];
+        if (!a) { a = rewardByReferred[r.referred_user_id] = { latest: r, count: 0, cash: 0, credit: 0, held: false }; }
+        a.count++; a.cash += Number(r.cash_kobo) || 0; a.credit += Number(r.credit_kobo) || 0;
+        if (r.status === "held") a.held = true;
+      });
       var people = (data[1] || []).map(function (p) {
         var rw2 = rewardByReferred[p.id];
         return {
           name: p.display_name || "Customer",
           joined_at: p.created_at,
           premium: !!(rw2 || (p.premium_until && Date.parse(p.premium_until) > Date.now())),
-          reward_status: rw2 ? rw2.status : null
+          reward_status: rw2 ? (rw2.held ? "held" : rw2.latest.status) : null,
+          paid_plan: rw2 ? rw2.latest.plan : null,
+          paid_amount_kobo: rw2 ? rw2.latest.amount_paid_kobo : null,
+          earned_cash_kobo: rw2 ? rw2.cash : null,
+          earned_credit_kobo: rw2 ? rw2.credit : null,
+          reward_count: rw2 ? rw2.count : 0
         };
       });
       return res.status(200).send(JSON.stringify({

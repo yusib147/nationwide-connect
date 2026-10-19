@@ -15,6 +15,14 @@ insert into categories (name, icon) values
   ('Furniture', 'sofa'),
   ('Fashion', 'dress'),
   ('Property', 'home'),
+  ('Food, Drinks & Catering', 'utensils'),
+  ('Agriculture & Animals', 'tractor'),
+  ('Health & Wellness', 'heart-pulse'),
+  ('Jobs & Careers', 'briefcase'),
+  ('Babies & Kids', 'baby'),
+  ('Building & Construction', 'hard-hat'),
+  ('Arts & Crafts', 'palette'),
+  ('Religion & Spiritual', 'hands-praying'),
   ('Services', 'wrench')
 on conflict (name) do nothing;
 

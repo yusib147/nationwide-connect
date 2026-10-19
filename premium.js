@@ -3,7 +3,14 @@
 var $ = window.$ || function (s) { return document.querySelector(s); };
 function hideSplash() {
   var s = $("#splash");
-  if (s) { setTimeout(function () { s.classList.add("hide"); }, 1100); }
+  if (!s) { return; }
+  var t0 = Date.now();
+  (function chk() {
+    var ready = document.querySelector("#home-grid .card") || document.querySelector("#screen-auth.active");
+    if (ready || Date.now() - t0 > 900) { s.classList.add("hide"); return; }
+    setTimeout(chk, 120);
+  })();
+  setTimeout(function () { s.classList.add("hide"); }, 2500);
 }
 function initPremiumUI() {
   /* hero carousel auto-rotate */
@@ -136,41 +143,133 @@ function fireConfetti() {
   })();
 }
 
-/* ---------- video-style ad banner: 60s perfect loop ---------- */
+/* ---------- video-style ad banner: 60s perfect loop ----------
+   Paid banners (admin_banners rows with is_active and in-date range) are
+   fetched first and inserted as the leading scenes, so a buyer's paid home
+   banner really rotates on the home page. When none are live, the site's
+   own promo scenes play as before. */
+function nmEsc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+function nmPaidBannerScenes() {
+  /* Returns a promise of admin_banners rows that are live right now.
+     The supabase-js client loads async, so wait for it briefly. */
+  return new Promise(function (resolve) {
+    var done = false;
+    function fin(rows) { if (!done) { done = true; resolve(rows || []); } }
+    var waited = 0;
+    var iv = setInterval(function () {
+      waited += 500;
+      var DB = null;
+      try { DB = window.NM_DB; } catch (e) {}
+      var ready = DB && DB.mode === "supabase" && DB.client;
+      if (!ready && waited < 6000) { return; }
+      clearInterval(iv);
+      if (!ready) { fin([]); return; }
+      try {
+        DB.client.from("admin_banners").select("title,subtitle,image_url,link_url,starts_at,ends_at,is_active,sort_order").eq("is_active", true).order("sort_order", { ascending: true }).limit(20)
+          .then(function (res) {
+            if (res.error || !res.data) { fin([]); return; }
+            var now = Date.now();
+            var live = res.data.filter(function (b) {
+              if (!b || !b.is_active) { return false; }
+              if (b.starts_at && new Date(b.starts_at).getTime() > now) { return false; }
+              if (b.ends_at && new Date(b.ends_at).getTime() < now) { return false; }
+              return true;
+            });
+            fin(live);
+          }, function () { fin([]); });
+      } catch (e) { fin([]); }
+    }, 500);
+    setTimeout(function () { clearInterval(iv); fin([]); }, 8000);
+  });
+}
+function nmPaidSceneEl(b) {
+  var d = document.createElement("div");
+  d.className = "ad-scene ad-paid";
+  var media = "";
+  var url = String(b.image_url || "");
+  if (url) {
+    var isVid = /\.(mp4|webm|mov)(\?|#|$)/i.test(url) || /video/i.test(url);
+    if (isVid) { media = '<video class="ad-pimg" src="' + nmEsc(url) + '" muted loop playsinline autoplay preload="metadata"></video>'; }
+    else { media = '<img class="ad-pimg" src="' + nmEsc(url) + '" alt="' + nmEsc(b.title || "Sponsored") + '" loading="lazy">'; }
+  }
+  var link = String(b.link_url || "").trim();
+  if (link) { d.setAttribute("data-paid-link", link); }
+  d.innerHTML = '<div class="ad-kicker">Sponsored</div>' +
+    '<div class="ad-title">' + nmEsc(b.title || "Sponsored") + "</div>" +
+    (b.subtitle ? '<div class="ad-sub">' + nmEsc(b.subtitle) + "</div>" : "") +
+    media +
+    (link ? '<span class="ad-cta" style="display:inline-block">View</span>' : "");
+  return d;
+}
 function initAdBanner() {
   var wrap = $("#ad-scenes");
   if (!wrap || wrap.dataset.ncInit) { return; }
   wrap.dataset.ncInit = "1";
-  var scenes = wrap.querySelectorAll(".ad-scene");
-  var fill = $("#ad-progress-fill");
-  if (!scenes.length || !fill) { return; }
-  var SCENE_MS = 6000, total = scenes.length * SCENE_MS, idx = -1;
-  function showScene(i) {
-    for (var k = 0; k < scenes.length; k++) {
-      scenes[k].classList.toggle("active", k === i);
+  var st = document.createElement("style");
+  st.textContent = ".ad-pimg{width:100%;max-height:140px;object-fit:cover;border-radius:10px;margin:8px 0 2px;display:block;background:#000}" +
+    ".ad-scene[data-paid-link]{cursor:pointer}.ad-scene[data-paid-link] .ad-cta{pointer-events:none}";
+  document.head.appendChild(st);
+  /* Generation counter: inserting paid banners restarts the rotation; the
+     old rotation's ticks and visibility listener retire themselves. */
+  var gen = 0;
+  function startAdRotation() {
+    var myGen = ++gen;
+    function alive() { return myGen === gen; }
+    var scenes = wrap.querySelectorAll(".ad-scene");
+    var fill = $("#ad-progress-fill");
+    if (!scenes.length || !fill) { return; }
+    var SCENE_MS = 6000, total = scenes.length * SCENE_MS, idx = -1;
+    function showScene(i) {
+      for (var k = 0; k < scenes.length; k++) {
+        scenes[k].classList.toggle("active", k === i);
+      }
     }
+    var reduce = reduceMotion();
+    if (reduce) { showScene(0); fill.style.width = "100%"; return; }
+    var start = Date.now();
+    showScene(0); idx = 0;
+    function tick() {
+      var el = (Date.now() - start) % total;
+      var i = Math.floor(el / SCENE_MS);
+      if (i !== idx) { idx = i; showScene(i); }
+      fill.style.width = (el / total * 100).toFixed(2) + "%";
+    }
+    var timer = setInterval(function () {
+      if (!alive()) { clearInterval(timer); return; }
+      tick();
+    }, 120);
+    function onVis() {
+      if (!alive()) { document.removeEventListener("visibilitychange", onVis); clearInterval(timer); return; }
+      if (document.hidden) { clearInterval(timer); timer = null; }
+      else if (!timer) { start = Date.now() - idx * SCENE_MS; timer = setInterval(function () { if (!alive()) { clearInterval(timer); return; } tick(); }, 120); tick(); }
+    }
+    document.addEventListener("visibilitychange", onVis);
   }
-  var reduce = reduceMotion();
-  if (reduce) { showScene(0); fill.style.width = "100%"; return; }
-  var start = Date.now();
-  showScene(0); idx = 0;
-  function tick() {
-    var el = (Date.now() - start) % total;
-    var i = Math.floor(el / SCENE_MS);
-    if (i !== idx) { idx = i; showScene(i); }
-    fill.style.width = (el / total * 100).toFixed(2) + "%";
-  }
-  var timer = setInterval(tick, 120);
-  document.addEventListener("visibilitychange", function () {
-    if (document.hidden) { clearInterval(timer); timer = null; }
-    else if (!timer) { start = Date.now() - idx * SCENE_MS; timer = setInterval(tick, 120); tick(); }
+  startAdRotation();
+  /* Paid banners arrive async: insert them first, then restart the rotation. */
+  nmPaidBannerScenes().then(function (paid) {
+    if (!paid || !paid.length) { return; }
+    for (var i = paid.length - 1; i >= 0; i--) {
+      try { wrap.insertBefore(nmPaidSceneEl(paid[i]), wrap.firstChild); } catch (e) {}
+    }
+    startAdRotation();
   });
-  /* ad CTA uses the same nav hook as hero buttons */
+  /* ad CTA uses the same nav hook as hero buttons; paid banners follow their link */
   var banner = $("#ad-banner");
-  if (banner) {
+  if (banner && !banner.dataset.ncPaidInit) {
+    banner.dataset.ncPaidInit = "1";
     banner.addEventListener("click", function (e) {
       var b = e.target.closest("[data-hero-go]");
-      if (b && typeof window.NM_show === "function") { window.NM_show(b.dataset.heroGo); }
+      if (b && typeof window.NM_show === "function") { window.NM_show(b.dataset.heroGo); return; }
+      var sc = e.target.closest(".ad-scene[data-paid-link]");
+      if (sc) {
+        var link = sc.getAttribute("data-paid-link") || "";
+        if (/^\/(?!\/)/.test(link)) {
+          if (link.indexOf("/p/") === 0) { window.location.href = link; }
+          else if (typeof window.NM_show === "function") { window.NM_show(link.replace(/^\//, "")); }
+          else { window.location.href = link; }
+        } else if (/^https?:\/\//i.test(link)) { window.open(link, "_blank", "noopener"); }
+      }
     });
   }
 }

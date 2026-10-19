@@ -346,8 +346,22 @@ html[data-theme="dark"] .sheet2{background:#1d130a;color:#f5ead8}
       e.preventDefault(); e.stopPropagation();
       var DB = window.NM_DB; if (!DB || !DB.toggleFavorite) { return; }
       DB.toggleFavorite(fav.getAttribute("data-fav"))
-        .then(function () { fav.classList.toggle("on"); toast(fav.classList.contains("on") ? "Saved to your list." : "Removed from Saved."); })
-        .catch(function () { toast("Could not update Saved."); });
+        .then(function (res) {
+          var pid = fav.getAttribute("data-fav");
+          var on = (res && typeof res.favorited === "boolean") ? res.favorited : !fav.classList.contains("on");
+          fav.classList.toggle("on", on);
+          /* Keep the phone's favorites list in sync, like the main toggle in
+             app.js does — the Me favorites count renders from it. */
+          try {
+            var arr = JSON.parse(localStorage.getItem("nc2_favs") || "[]"), ix = arr.indexOf(pid);
+            if (on && ix < 0) { arr.push(pid); }
+            if (!on && ix >= 0) { arr.splice(ix, 1); }
+            localStorage.setItem("nc2_favs", JSON.stringify(arr));
+          } catch (e2) {}
+          if (window.NM_favSync) { try { window.NM_favSync(pid, on); } catch (e3) {} }
+          toast(on ? "Saved to favorites." : "Removed from favorites.");
+        })
+        .catch(function (err) { toast((err && err.message) || "Could not update favorites."); });
       return;
     }
     var row = e.target.closest("#store2-grid .store-row");
@@ -1086,6 +1100,54 @@ window.NM_favSync = function (id, on) {
       if (++tries < 10) { setTimeout(attempt, 600); }
     })();
   }
+  /* Banner payments need real next steps, not a toast: the banner goes live
+     after the buyer sends their artwork to the hotline and the admin sets it
+     up. Show a dismissible sheet with the exact process. */
+  function bannerDoneSheet() {
+    try {
+      var id = "nm-banner-done";
+      var old = document.getElementById(id);
+      if (old && old.parentNode) { old.parentNode.removeChild(old); }
+      if (!document.getElementById("nm-banner-done-css")) {
+        var st = document.createElement("style");
+        st.id = "nm-banner-done-css";
+        st.textContent = "#nm-banner-done{position:fixed;inset:0;z-index:3000;background:rgba(8,5,2,.6);display:flex;align-items:center;justify-content:center;padding:20px}" +
+          "#nm-banner-done .nm-bd-sh{position:relative;background:var(--chrome,#fff);color:var(--ink,#111);border-radius:20px;padding:22px 20px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35)}" +
+          "#nm-banner-done h3{margin:0 0 8px;font-size:18px}" +
+          "#nm-banner-done p,#nm-banner-done ol{font-size:14px;line-height:1.6;margin:8px 0}" +
+          "#nm-banner-done ol{padding-left:20px}" +
+          "#nm-banner-done .nm-bd-ok{margin-top:10px;width:100%;min-height:46px;border:0;border-radius:14px;background:linear-gradient(135deg,#e8380d,#ff7a18);color:#fff;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit}" +
+          "#nm-banner-done .nm-bd-later{margin-top:6px;width:100%;min-height:40px;border:0;background:none;color:var(--muted,#888);font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}" +
+          "#nm-banner-done .nm-bd-x{position:absolute;top:6px;right:10px;background:none;border:0;color:var(--muted,#888);font-size:26px;line-height:1;padding:8px;cursor:pointer}";
+        document.head.appendChild(st);
+      }
+      var d = document.createElement("div");
+      d.id = id;
+      d.setAttribute("role", "dialog");
+      d.setAttribute("aria-label", "Banner payment confirmed");
+      d.innerHTML = '<div class="nm-bd-sh"><button class="nm-bd-x" aria-label="Close">×</button>' +
+        "<h3>Payment confirmed 🎉</h3>" +
+        "<p>Your home page banner space is booked for <b>2 weeks</b>. Here is exactly what happens next:</p>" +
+        "<ol><li>Send us your banner artwork: a <b>video of at most 20 seconds</b> or <b>1 or 2 pictures</b>, your business name and one short line about it.</li>" +
+        "<li>We review it and put your banner live on the home page. It runs for a full <b>2 weeks from the day it goes live</b>.</li></ol>" +
+        '<button class="nm-bd-ok" id="nm-bd-upload">Upload your banner artwork</button>' +
+        '<p style="font-size:13px;color:var(--muted,#888);text-align:center;margin:10px 0 0">No artwork ready? Send it to WhatsApp <b>09150951870</b> and we will handle it.</p>' +
+        '<button class="nm-bd-later">Not now</button></div>';
+      document.body.appendChild(d);
+      function close() { if (d.parentNode) { d.parentNode.removeChild(d); } }
+      d.querySelector(".nm-bd-x").addEventListener("click", close);
+      d.querySelector(".nm-bd-later").addEventListener("click", close);
+      d.querySelector("#nm-bd-upload").addEventListener("click", function () {
+        close();
+        if (window.NM_openBannerSubmit) { try { window.NM_openBannerSubmit(); } catch (e) { say("Could not open the upload page. Please send your artwork to WhatsApp 09150951870."); } }
+        else { say("Could not open the upload page. Please send your artwork to WhatsApp 09150951870."); }
+      });
+      d.addEventListener("click", function (e) { if (e.target === d) { close(); } });
+    } catch (e) { say("Payment confirmed. Your banner request has been received."); }
+  }
+  /* Shared with the wallet-pay flow (refer.js): banner payments are never
+     "active" automatically — the buyer must send artwork for admin setup. */
+  try { window.NM_bannerDoneSheet = bannerDoneSheet; } catch (e) {}
   if (!ref) { return; }
   var tries = 0;
   (function verify() {
@@ -1094,8 +1156,8 @@ window.NM_favSync = function (id, on) {
         var plan = r.plan || r.purpose || "";
         if (plan.indexOf("premium") >= 0) { say("Payment confirmed. Your Premium is now active."); }
         else if (plan.indexOf("bump") >= 0) { say("Payment confirmed. Your listing has been promoted to the top."); }
-        else if (plan.indexOf("featured") >= 0) { say("Payment confirmed. Your listing is now Featured."); }
-        else if (plan.indexOf("banner") >= 0) { say("Payment confirmed. Your banner request has been received."); }
+        else if (plan.indexOf("featured") >= 0) { say("Payment confirmed. Your listing is now Featured for 2 weeks."); }
+        else if (plan.indexOf("banner") >= 0) { bannerDoneSheet(); }
         else { say("Payment confirmed. Thank you."); }
         if (window.NM_notifBadge) { try { window.NM_notifBadge(true); } catch (e) {} }
       } else if (r && r.ok) {
