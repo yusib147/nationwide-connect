@@ -24,8 +24,12 @@ function paidBannerPayments(uid) {
   return lib.sb("payments?select=id,reference,created_at,paid_at&user_id=eq." + uid +
     "&purpose=eq.banner&status=eq.paid&order=created_at.asc&limit=50", {});
 }
+function allBannerPayments(uid) {
+  return lib.sb("payments?select=id,reference,plan,amount_kobo,status,provider,meta,created_at,paid_at&user_id=eq." + uid +
+    "&purpose=eq.banner&order=created_at.desc&limit=50", {});
+}
 function userSubmissions(uid) {
-  return lib.sb("banner_submissions?select=id,payment_ref,title,subtitle,link_url,media,status,created_at,reviewed_at&user_id=eq." + uid +
+  return lib.sb("banner_submissions?select=id,payment_ref,title,subtitle,link_url,media,status,created_at,reviewed_at,live_until&user_id=eq." + uid +
     "&order=created_at.desc&limit=50", {});
 }
 function consumedRefs(subs) {
@@ -87,19 +91,50 @@ module.exports = async function (req, res) {
     if (b.action === "state") {
       var pays = await paidBannerPayments(uid).catch(function () { return []; });
       var subs = await userSubmissions(uid).catch(function () { return []; });
+      var allPays = await allBannerPayments(uid).catch(function () { return pays || []; });
       var open = unconsumed(pays, subs);
       var latest = (subs && subs[0]) || null;
+      var subByRef = {};
+      (subs || []).forEach(function (s) { if (!subByRef[s.payment_ref]) subByRef[s.payment_ref] = s; });
+      var nowMs = Date.now();
+      var slots = (pays || []).map(function (p) {
+        var s = subByRef[p.reference] || null;
+        var st = "awaiting_artwork";
+        if (s && s.status === "pending") st = "in_review";
+        else if (s && s.status === "approved") st = (s.live_until && new Date(s.live_until).getTime() < nowMs) ? "ended" : "live";
+        else if (s && s.status === "rejected") st = "rejected";
+        return { payment_ref: p.reference, paid_at: p.paid_at || p.created_at, state: st, submission: s };
+      });
       return res.status(200).send(JSON.stringify({
         ok: true,
         paidBanner: !!(pays && pays.length),
         openPayment: open ? { reference: open.reference, paid_at: open.paid_at || open.created_at } : null,
-        latest: latest
+        latest: latest,
+        payments: (allPays || []).map(function (x) {
+          var man = (x.meta && x.meta.manual) || {};
+          return { reference: x.reference, plan: x.plan, amount_kobo: x.amount_kobo, status: x.status, provider: x.provider, manual_state: man.state || null, created_at: x.created_at, paid_at: x.paid_at || null };
+        }),
+        submissions: subs || [],
+        slots: slots
       }));
     }
     if (b.action === "submit") {
       var pays2 = await paidBannerPayments(uid);
       var subs2 = await userSubmissions(uid).catch(function () { return []; });
-      var pay = unconsumed(pays2, subs2);
+      var pay = null;
+      if (b.payment_ref) {
+        /* The buyer picks WHICH paid banner this artwork belongs to.
+           Server-verified: the reference must be one of the caller's own
+           paid banner payments and must not already carry pending/approved
+           artwork. */
+        var want = String(b.payment_ref);
+        (pays2 || []).forEach(function (p) { if (p.reference === want) pay = p; });
+        if (!pay) return err(res, 400, "that banner payment was not found");
+        var used = consumedRefs(subs2);
+        if (used[pay.reference]) return err(res, 400, "artwork already sent for that banner — choose another banner ad");
+      } else {
+        pay = unconsumed(pays2, subs2);
+      }
       if (!pay) return err(res, 400, "no paid banner awaiting artwork");
       var title = String(b.title || "").trim().slice(0, 80);
       if (!title) return err(res, 400, "business name required");
@@ -108,6 +143,21 @@ module.exports = async function (req, res) {
       if (link === null) return err(res, 400, "link must start with http(s):// or /");
       var merr = mediaError(b.media, uid);
       if (merr) return err(res, 400, merr);
+      /* Rejected artwork is resubmitted by UPDATING its row: payment_ref is
+         UNIQUE, so a fresh INSERT for the same payment always failed with
+         "already submitted" and the buyer could never recover. */
+      var rejectedRow = null;
+      (subs2 || []).forEach(function (s) { if (s.payment_ref === pay.reference && s.status === "rejected") rejectedRow = s; });
+      if (rejectedRow) {
+        var patch = { title: title, subtitle: subtitle, link_url: link, media: b.media, status: "pending", reviewed_at: null, live_until: null };
+        var updated;
+        try {
+          updated = await lib.sb("banner_submissions?payment_ref=eq." + encodeURIComponent(pay.reference), { method: "PATCH", body: JSON.stringify(patch) });
+        } catch (e) {
+          return err(res, 500, "could not resend your artwork");
+        }
+        return res.status(200).send(JSON.stringify({ ok: true, submission: updated && updated[0], resubmitted: true }));
+      }
       var row = [{
         user_id: uid,
         payment_ref: pay.reference,

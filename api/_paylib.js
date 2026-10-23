@@ -6,9 +6,20 @@ var SERVICE = process.env.SUPABASE_SERVICE_ROLE || "";
 var PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || "";
 var SITE = "https://nationwide-connect-demo1-skepterforge1471-8639s-projects.vercel.app";
 
+// Manual bank-transfer mode (Ibrahim, 2026-10-23): Paystack checkout is
+// PAUSED, not removed. While MANUAL_MODE is true, /api/pay-init refuses,
+// the client routes every purchase to the transfer sheet (paymanual.js),
+// claims are recorded by /api/pay-manual, and an admin approves each one
+// from the admin panel, which runs the same fulfill() as a verified
+// Paystack payment. To bring Paystack back: set MANUAL_MODE false and
+// remove the NM_manualPay hook in supabase/client.js startPayment.
+var MANUAL_MODE = true;
+var MANUAL_ACCOUNT = { bank: "OPay", number: "9150951870", name: "Yusuf Babatunde Ibrahim" };
+
 // Server-side price list. The client NEVER sets the amount.
 var PLANS = {
   bump_1:      { purpose: "bump",     label: "Bump listing",        amount_kobo: 100000,  days: 0 },
+  promote_7d:  { purpose: "promote",  label: "Promote 1 week",      amount_kobo: 100000,  days: 7 },
   featured_7d: { purpose: "featured", label: "Featured 2 weeks",    amount_kobo: 500000,  days: 14 },
   premium_1m:  { purpose: "premium",  label: "Launch promo Premium 2 months + free listing ad boost", amount_kobo: 100000, months: 2, promo_ads: true },
   premium_promo_2m: { purpose: "premium", label: "Launch promo Premium 2 months + free listing ad boost", amount_kobo: 100000, months: 2, promo_ads: true },
@@ -75,6 +86,13 @@ function fulfill(p) {
     var work = Promise.resolve();
     if (p.purpose === "bump" && p.target_id) {
       work = sb("products?id=eq." + p.target_id, { method: "PATCH", body: JSON.stringify({ bump_at: now.toISOString() }) });
+    } else if (p.purpose === "promote" && p.target_id) {
+      work = sb("products?select=promoted_until&id=eq." + p.target_id + "&limit=1", {}).then(function (prows) {
+        var cur = prows && prows[0] && prows[0].promoted_until ? Date.parse(prows[0].promoted_until) : 0;
+        var base = Math.max(now.getTime(), isNaN(cur) ? 0 : cur);
+        var exp = new Date(base + days * 864e5).toISOString();
+        return sb("products?id=eq." + p.target_id, { method: "PATCH", body: JSON.stringify({ promoted_until: exp, bump_at: now.toISOString() }) });
+      });
     } else if (p.purpose === "featured" && p.target_id) {
       var exp = new Date(now.getTime() + days * 864e5).toISOString();
       work = sb("admin_featured?select=product_id&product_id=eq." + p.target_id + "&limit=1", {}).then(function (frows) {
@@ -221,4 +239,4 @@ function referralReward(p) {
   }).catch(function () { return null; });
 }
 
-module.exports = { PLANS: PLANS, sb: sb, getUser: getUser, paystack: paystack, fulfill: fulfill, verifyAndFulfill: verifyAndFulfill, SITE: SITE, hasKeys: function () { return !!PAYSTACK_SECRET && !!SERVICE; } };
+module.exports = { PLANS: PLANS, sb: sb, getUser: getUser, paystack: paystack, fulfill: fulfill, verifyAndFulfill: verifyAndFulfill, SITE: SITE, MANUAL_MODE: MANUAL_MODE, MANUAL_ACCOUNT: MANUAL_ACCOUNT, hasKeys: function () { return !!PAYSTACK_SECRET && !!SERVICE; } };

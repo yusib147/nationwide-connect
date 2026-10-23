@@ -5,6 +5,7 @@ module.exports = async function (req, res) {
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "POST") return res.status(405).send(JSON.stringify({ error: "POST only" }));
+  if (lib.MANUAL_MODE) return res.status(410).send(JSON.stringify({ error: "Card payment is paused right now. Please pay by bank transfer instead." }));
   if (!lib.hasKeys()) return res.status(503).send(JSON.stringify({ error: "payments not configured" }));
   var b = req.body || {};
   if (typeof b === "string") { try { b = JSON.parse(b); } catch (e) { b = {}; } }
@@ -13,7 +14,7 @@ module.exports = async function (req, res) {
   var plan = lib.PLANS[b.plan];
   if (!plan) return res.status(400).send(JSON.stringify({ error: "unknown plan" }));
   var target = b.target_id || null;
-  if ((plan.purpose === "bump" || plan.purpose === "featured")) {
+  if ((plan.purpose === "bump" || plan.purpose === "featured" || plan.purpose === "promote")) {
     if (!target) return res.status(400).send(JSON.stringify({ error: "listing required" }));
     var rows = await lib.sb("products?select=id,seller_id&id=eq." + target + "&limit=1", {}).catch(function () { return null; });
     if (!rows || !rows[0]) return res.status(404).send(JSON.stringify({ error: "listing not found" }));

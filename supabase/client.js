@@ -182,6 +182,7 @@
       aiFlagReason: r.ai_flag_reason || "",
       images: r.image_urls || [],
       bumpAt: r.bump_at ? Date.parse(r.bump_at) : 0,
+      promotedUntil: r.promoted_until ? Date.parse(r.promoted_until) : 0,
       featured: false,
       featuredUntil: 0,
       at: r.created_at ? Date.parse(r.created_at) : Date.now(),
@@ -703,6 +704,7 @@
     startPayment: function (plan, targetId) {
       var self = this;
       if (!self.client) { return Promise.reject(new Error("Payments need a connection.")); }
+      if (window.NM_manualPay) { return window.NM_manualPay(plan, targetId); }
       return self.client.auth.getSession().then(function (s) {
         var tok = s && s.data && s.data.session && s.data.session.access_token;
         if (!tok) { throw new Error("Log in to pay."); }

@@ -72,14 +72,28 @@
       }
     }
   }
+  function badgePromo(grid) {
+    var map = window.NM_PROMOTED; if (!map) { return; }
+    for (var i = 0; i < grid.children.length; i++) {
+      var card = grid.children[i];
+      if (!card.getAttribute || card.classList.contains("nv-sk")) { continue; }
+      var id = card.getAttribute("data-id");
+      if (!id || !map[id]) { continue; }
+      var photo = card.querySelector(".card-photo");
+      if (!photo || photo.querySelector(".nv-promo")) { continue; }
+      var r = document.createElement("span");
+      r.className = "nv-promo"; r.textContent = "\uD83D\uDE80 PROMOTED";
+      photo.appendChild(r);
+    }
+  }
   function watchGrid(gid) {
     var g = document.getElementById(gid); if (!g || g._nvWatched) { return; }
     g._nvWatched = true;
     new MutationObserver(function () {
       clearTimeout(freshTimer);
-      freshTimer = setTimeout(function () { badgeFresh(g); }, 350);
+      freshTimer = setTimeout(function () { badgeFresh(g); badgePromo(g); }, 350);
     }).observe(g, { childList: true });
-    badgeFresh(g);
+    badgeFresh(g); badgePromo(g);
   }
 
   /* ---------------- Screen activation ---------------- */
@@ -89,11 +103,130 @@
     if (!scr || scr.id === activeId) { return; }
     activeId = scr.id;
     sweep();
-    scr.classList.remove("nv-enter"); void scr.offsetWidth; scr.classList.add("nv-enter");
+    cascade(scr);
     var gid = GRID_FOR[scr.id];
     if (gid) { setTimeout(function () { maybeSkeleton(gid); }, 30); }
   }
+  /* The drop-list cascade: every content block on the screen settles in
+     from the top down, in order, each time the screen is entered. */
+  var UNWRAP_SEL = "[id$='-body'],[id$='-list'],[id$='-grid'],.screen-scroll,.scroll";
+  function cascade(scr) {
+    var blocks = [];
+    function pushKids(el) {
+      for (var i = 0; i < el.children.length; i++) {
+        var k = el.children[i];
+        if (k.nodeType !== 1 || k.hidden || k.classList.contains("seo-h1")) { continue; }
+        if (k.id && /-grid$/.test(k.id)) { continue; } /* grids cascade their own cards */
+        if (k.matches && k.matches(UNWRAP_SEL) && k.children.length > 1 && blocks.length < 4) { pushKids(k); }
+        else { blocks.push(k); }
+        if (blocks.length >= 10) { return; }
+      }
+    }
+    pushKids(scr);
+    blocks.forEach(function (b) { b.classList.remove("nv-blk"); });
+    void scr.offsetWidth; /* one reflow for the whole cascade, not one per block */
+    blocks.forEach(function (b, i) {
+      b.style.animationDelay = Math.min(i * 35, 315) + "ms";
+      b.classList.add("nv-blk");
+    });
+    setTimeout(function () {
+      blocks.forEach(function (b) { b.classList.remove("nv-blk"); b.style.animationDelay = ""; });
+    }, 1000);
+  }
+  /* Every menu, sheet and dialog: when it becomes visible, its contents
+     pop in one after another, top to bottom (Ibrahim, Oct 20). Panels are
+     mostly static elements shown/hidden by the app, so each panel gets
+     its own tiny attribute watcher that replays the cascade on open —
+     no full-page mutation scanning (that was the lag). */
+  var PANEL_SEL = ".modal,.sheet,.sheet2,.shx-sheet,.stx-sheet,.store2-sortmenu,.photo-picker,[role='dialog']";
+  function panelVisible(p) {
+    if (p.hidden) { return false; }
+    var cs = getComputedStyle(p);
+    return cs.display !== "none" && cs.visibility !== "hidden";
+  }
+  function playDrop(p) {
+    p.classList.remove("nv-drop"); void p.offsetWidth; p.classList.add("nv-drop");
+  }
+  function registerPanel(p, playNow) {
+    if (!p) { return; }
+    if (p._nvPanel) { if (playNow) { playDrop(p); } return; }
+    p._nvPanel = true;
+    var was = false, lastPlay = 0;
+    try { was = panelVisible(p); } catch (e) {}
+    new MutationObserver(function () {
+      var now = false;
+      try { now = panelVisible(p); } catch (e) { return; }
+      if (now && !was && Date.now() - lastPlay > 450) { lastPlay = Date.now(); playDrop(p); }
+      was = now;
+    }).observe(p, { attributes: true, attributeFilter: ["class", "style", "hidden"] });
+    if (playNow || was) { playDrop(p); }
+  }
+  function scanPanels(root, playNow) {
+    if (!root || root.nodeType !== 1) { return; }
+    try {
+      if (root.matches && root.matches(PANEL_SEL)) { registerPanel(root, playNow); }
+      if (root.querySelectorAll) { root.querySelectorAll(PANEL_SEL).forEach(function (p) { registerPanel(p, playNow); }); }
+    } catch (e) {}
+  }
+  function watchOverlays() {
+    if (!document.body || document.body._nvDropObs) { return; }
+    document.body._nvDropObs = true;
+    scanPanels(document.body);
+    var pending = [], queued = false;
+    new MutationObserver(function (muts) {
+      muts.forEach(function (m) {
+        m.addedNodes.forEach(function (n) {
+          if (n.nodeType !== 1) { return; }
+          var cn = typeof n.className === "string" ? n.className : "";
+          /* only plausible panel containers get a subtree scan */
+          if (n.parentNode === document.body || /sheet|modal|dialog|picker|menu/.test(cn)) { pending.push(n); }
+          else if (n.matches && n.matches(PANEL_SEL)) { registerPanel(n); }
+        });
+      });
+      if (pending.length && !queued) {
+        queued = true;
+        requestAnimationFrame(function () {
+          var batch = pending; pending = []; queued = false;
+          batch.forEach(function (n) { scanPanels(n, true); });
+        });
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
+  /* Press feedback that always fires: a class driven by pointer events,
+     so every button, card and bar visibly dips when pressed. */
+  var PRESS_SEL = "button,[role='button'],.btn-primary,.btn-secondary,.chip,.mini-btn,.pill,.sort-pill,.link-btn,.nav-btn,.shx-act,.card,.cat-row,.convo,.chat-cta";
+  function watchPress() {
+    if (document.body._nvPress) { return; }
+    document.body._nvPress = true;
+    document.addEventListener("pointerdown", function (e) {
+      try {
+        var t = e.target && e.target.closest ? e.target.closest(PRESS_SEL) : null;
+        if (!t) { return; }
+        var big = t.classList.contains("card") || t.classList.contains("cat-row") || t.classList.contains("convo") || t.classList.contains("chat-cta");
+        /* inline !important: beats every stylesheet layer and entrance animation */
+        t.style.setProperty("transition", "transform .15s ease-out, filter .15s ease-out", "important");
+        t.style.setProperty("transform", big ? "scale(.955)" : "scale(.9)", "important");
+        t.style.setProperty("filter", "brightness(.93)", "important");
+        t.classList.add("nv-pressing");
+        var clear = function () {
+          t.style.removeProperty("transform");
+          t.style.removeProperty("filter");
+          t.classList.remove("nv-pressing");
+          setTimeout(function () { t.style.removeProperty("transition"); }, 180);
+          document.removeEventListener("pointerup", clear);
+          document.removeEventListener("pointercancel", clear);
+        };
+        document.addEventListener("pointerup", clear);
+        document.addEventListener("pointercancel", clear);
+        setTimeout(clear, 2500);
+      } catch (err) {}
+    }, true);
+  }
+
   function watch() {
+    try { watchOverlays(); } catch (e) {}
+    try { watchPress(); } catch (e) {}
     var screens = document.querySelectorAll(".screen");
     if (!screens.length) { setTimeout(watch, 600); return; }
     screens.forEach(function (scr) {

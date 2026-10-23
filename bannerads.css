@@ -1,0 +1,82 @@
+/* Nationwide Media Connect — banner ads: home rail, Updates sponsored band,
+   and the rebuilt My banner ads hub (bannerads.js). Theme variables only,
+   so LIGHT CLEAN and OLED BLACK both work. */
+
+/* ---------- home rail: house slot + advertiser slots ---------- */
+.nm-rail{margin:12px 14px 4px}
+.nm-rail-head{display:flex;align-items:center;gap:8px;margin:0 2px 8px}
+.nm-rail-head b{font-size:13px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--ink)}
+.nm-rail-head span{font-size:11px;font-weight:800;letter-spacing:1.2px;color:var(--acc2);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+.nm-rail-track{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px;scrollbar-width:none}
+.nm-rail-track::-webkit-scrollbar{display:none}
+.nm-rail-card{flex:0 0 78%;max-width:340px;scroll-snap-align:start;border-radius:16px;overflow:hidden;background:#101014;color:#fff;position:relative;cursor:pointer;border:0;padding:0;text-align:left;font-family:inherit;display:block;width:100%}
+@media(min-width:700px){.nm-rail-card{flex-basis:31.5%}}
+.nm-rail-media{width:100%;height:132px;object-fit:cover;display:block;background:#000}
+.nm-rail-ph{height:132px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#2b1509,#160c05);padding:14px;text-align:center}
+.nm-rail-ph .nm-rail-big{font-size:17px;font-weight:900;line-height:1.25}
+.nm-rail-ph .nm-rail-small{font-size:12px;color:rgba(255,255,255,.7);line-height:1.45}
+.nm-rail-body{padding:10px 12px 12px}
+.nm-rail-kick{font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--acc2)}
+.nm-rail-title{font-size:15px;font-weight:800;margin:3px 0 2px;line-height:1.3}
+.nm-rail-sub{font-size:12px;color:rgba(255,255,255,.68);line-height:1.45}
+.nm-rail-cta{display:inline-block;margin-top:8px;background:var(--acc-grad);color:#fff;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:800}
+.nm-rail-house{background:linear-gradient(135deg,#1a1a20,#101014)}
+.nm-rail-card:focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
+
+/* ---------- Updates sponsored band ---------- */
+.nm-band{margin:14px 16px 4px}
+.nm-band-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.nm-band-head b{font-size:14px;font-weight:800;color:var(--ink)}
+.nm-band-head span{font-size:10px;font-weight:800;letter-spacing:1.2px;color:var(--acc2);border:1px solid var(--line);border-radius:6px;padding:2px 7px;text-transform:uppercase}
+.nm-band-track{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px;scrollbar-width:none}
+.nm-band-track::-webkit-scrollbar{display:none}
+.nm-band-card{flex:0 0 82%;max-width:330px;scroll-snap-align:start;background:var(--chrome);border:1px solid var(--line-soft);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-card);cursor:pointer;font-family:inherit;text-align:left;padding:0;color:var(--ink);display:block;width:100%}
+@media(min-width:700px){.nm-band-card{flex-basis:31.5%}}
+.nm-band-media{width:100%;height:120px;object-fit:cover;display:block;background:#000}
+.nm-band-ph{height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;background:var(--chrome2);padding:12px;text-align:center}
+.nm-band-body{padding:10px 12px 12px}
+.nm-band-biz{font-size:14px;font-weight:800;color:var(--ink)}
+.nm-band-sub{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.45}
+.nm-band-cta{display:inline-block;margin-top:8px;background:var(--acc-grad);color:#fff;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:800}
+
+/* ---------- My banner ads hub ---------- */
+.nm-ba-page{position:fixed;inset:0;z-index:99990;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.nm-ba-wrap{max-width:720px;margin:0 auto;padding:0 0 calc(34px + env(safe-area-inset-bottom))}
+.nm-ba-top{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;background:var(--card);border-bottom:1px solid var(--line-soft);padding:calc(12px + env(safe-area-inset-top)) 14px 12px}
+.nm-ba-top h2{margin:0;font-size:17px;font-weight:800;color:var(--ink)}
+.nm-ba-sec{margin:14px 14px 0;background:var(--card);border:1px solid var(--line-soft);border-radius:20px;padding:18px;box-shadow:var(--shadow-card)}
+.nm-ba-sec h3{margin:0 0 8px;font-size:15.5px;font-weight:800;color:var(--ink)}
+.nm-ba-sub{font-size:13px;color:var(--muted);line-height:1.6;margin:0 0 10px}
+.nm-ba-price{display:inline-block;background:var(--acc-soft);color:var(--ink);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:800;margin-bottom:10px}
+.nm-ba-btn{border:0;border-radius:12px;background:var(--acc-grad);color:#fff;font-weight:800;font-size:14px;padding:12px 16px;cursor:pointer;min-height:46px;font-family:inherit;width:100%}
+.nm-ba-btn.ghost{background:var(--card);color:var(--ink);border:1.5px solid var(--line)}
+.nm-ba-btn:disabled{opacity:.55;cursor:default}
+.nm-ba-steps{display:flex;gap:0;margin:12px 0 4px}
+.nm-ba-step{flex:1;text-align:center;position:relative;padding-top:20px;font-size:11px;font-weight:700;color:var(--muted)}
+.nm-ba-step::before{content:"";position:absolute;top:5px;left:50%;transform:translateX(-50%);width:11px;height:11px;border-radius:50%;background:var(--line);z-index:1}
+.nm-ba-step::after{content:"";position:absolute;top:10px;left:calc(-50% + 8px);right:calc(50% + 8px);height:2px;background:var(--line)}
+.nm-ba-step:first-child::after{display:none}
+.nm-ba-step.done{color:var(--ink)}
+.nm-ba-step.done::before{background:#1cab55}
+.nm-ba-step.now{color:var(--acc2)}
+.nm-ba-step.now::before{background:var(--acc2);box-shadow:0 0 0 4px var(--acc-soft)}
+.nm-ba-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.nm-ba-chip{display:inline-block;font-size:11px;font-weight:800;border-radius:99px;padding:4px 10px;background:var(--acc-soft);color:var(--muted)}
+.nm-ba-chip.ok{background:#e7f8ee;color:#0d7a3d}
+.nm-ba-chip.warn{background:#fdf3e0;color:#9a6200}
+.nm-ba-chip.bad{background:#fdecec;color:#b3261e}
+[data-theme="dark"] .nm-ba-chip.ok{background:rgba(28,171,85,.18);color:#6fce97}
+[data-theme="dark"] .nm-ba-chip.warn{background:rgba(232,178,0,.16);color:#e8c95c}
+[data-theme="dark"] .nm-ba-chip.bad{background:rgba(220,60,60,.16);color:#f08a80}
+.nm-ba-meta{font-size:12.5px;color:var(--muted);line-height:1.6;margin:6px 0}
+.nm-ba-meta b{color:var(--ink)}
+.nm-ba-thumbs{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}
+.nm-ba-thumb{width:110px;height:110px;border-radius:12px;object-fit:cover;background:#000}
+video.nm-ba-thumb{width:220px;height:auto;max-height:160px}
+.nm-ba-in{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);padding:11px 13px;font-size:14px;font-family:inherit;margin-bottom:9px}
+.nm-ba-in:focus{outline:0;border-color:var(--acc2)}
+.nm-ba-mode{display:flex;gap:8px;margin-bottom:12px}
+.nm-ba-mode button{flex:1;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:12px 8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;min-height:46px}
+.nm-ba-mode button.on{border-color:var(--acc2);background:var(--acc-soft)}
+.nm-ba-err{font-size:13px;color:#c0392b;font-weight:700;margin:0 0 10px}
+.nm-ba-wa{display:inline-flex;align-items:center;gap:8px;margin-top:6px;padding:11px 16px;min-height:44px;border-radius:12px;background:#22c55e;color:#fff;font-weight:800;font-size:13.5px;text-decoration:none}

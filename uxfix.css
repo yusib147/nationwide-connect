@@ -75,8 +75,9 @@
   #screen-me { max-width: 1180px !important; }
   /* D11: install prompt docks top-right as a slim card, never over the grid */
   #nm-inst { top: 18px !important; bottom: auto !important; right: 22px !important; left: auto !important; max-width: 360px !important; }
-  /* D12: Refer pill docks into the sidebar bottom instead of floating over listings */
-  #nm-refer-fab { right: auto !important; left: 14px !important; bottom: 16px !important; width: 210px; justify-content: center; border-radius: 14px !important; }
+  /* D12 (revised Oct 20): the sidebar-bottom dock rendered the pill covered;
+     dock bottom-right of the content area instead, pill shape kept */
+  #nm-refer-fab { right: 22px !important; left: auto !important; bottom: 22px !important; width: auto; justify-content: center; border-radius: 999px !important; }
   /* D28: two-pane chat (rail element injected by uxfix.js) */
   #screen-thread.nm-twopane { left: 546px !important; right: 0 !important; width: auto !important; max-width: none !important; margin: 0 !important; }
   .nm-thread-rail { position: fixed; top: 0; bottom: 0; left: 238px; width: 308px; background: var(--chrome);
@@ -106,7 +107,7 @@
 /* ---------- uxfix sheets (filters M6/M25, shared) ---------- */
 .ux-scrim { position: fixed; inset: 0; background: rgba(5, 8, 12, .55); z-index: 99990; display: flex; align-items: flex-end; justify-content: center; }
 .ux-sheet { background: var(--chrome); color: var(--ink); width: 100%; max-width: 560px; max-height: 86dvh; overflow-y: auto;
-  border-radius: 20px 20px 0 0; padding: 10px 18px calc(18px + env(safe-area-inset-bottom)); animation: sheetUp .25s ease; }
+  border-radius: 20px 20px 0 0; padding: 10px 18px calc(18px + env(safe-area-inset-bottom)); animation: sheetUp .45s cubic-bezier(.32,.72,0,1); }
 @media (min-width: 1024px) { .ux-scrim { align-items: center; padding: 24px; } .ux-sheet { border-radius: 20px; } }
 .ux-sheet h3 { margin: 6px 0 2px; font-size: 17px; font-weight: 800; }
 .ux-sheet .ux-sub { margin: 0 0 12px; font-size: 13px; color: var(--muted); }

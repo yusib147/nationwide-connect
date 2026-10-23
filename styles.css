@@ -12,7 +12,7 @@
   --green: var(--color-secondary);
   --green-deep: var(--color-secondary-deep);
   --green-grad: linear-gradient(135deg, #24c161 0%, #0d8a42 100%);
-  --ease: cubic-bezier(.2, .7, .3, 1);
+  --ease: cubic-bezier(.32, .72, 0, 1);
   --spring: cubic-bezier(.2, .9, .3, 1.12);
   --r-lg: 20px;
   --r-md: 14px;
@@ -76,7 +76,7 @@ input, select, textarea { font-family: inherit; font-size: 16px; }
 #app { max-width: 480px; margin: 0 auto; background: var(--bg); min-height: 100vh; position: relative; overflow-x: clip; }
 .screen { display: none; padding-bottom: 104px; min-height: 100vh; }
 #screen-detail, #screen-seller { padding-bottom: 20px; }
-.screen.active { display: block; animation: screenIn .3s var(--ease); }
+.screen.active { display: block; animation: screenIn .38s var(--ease); }
 @keyframes screenIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 
@@ -326,7 +326,7 @@ input, select, textarea { font-family: inherit; font-size: 16px; }
 
 .sz-scrim {
   position: fixed; inset: 0; z-index: 90; background: var(--overlay);
-  animation: fadeIn .2s var(--ease);
+  animation: fadeIn .3s var(--ease);
 }
 .sz-scrim[hidden] { display: none; }
 @keyframes fadeIn { from { opacity: 0; } }
@@ -334,7 +334,7 @@ input, select, textarea { font-family: inherit; font-size: 16px; }
   position: fixed; top: 0; left: 0; bottom: 0; z-index: 95; width: 280px;
   background: var(--chrome); border-right: 1px solid var(--line-soft);
   padding: calc(18px + env(safe-area-inset-top)) 16px 18px;
-  animation: drawerIn .28s var(--spring); overflow-y: auto;
+  animation: drawerIn .42s var(--spring); overflow-y: auto;
   max-width: calc(100vw - 40px);
 }
 .sz-drawer[hidden] { display: none; }
@@ -499,9 +499,9 @@ input, select, textarea { font-family: inherit; font-size: 16px; }
   position: relative; background: var(--card); border-radius: 18px; overflow: hidden;
   box-shadow: var(--shadow-card); cursor: pointer;
   transition: transform .18s var(--ease);
-  animation: cardIn .45s var(--ease) backwards; animation-delay: calc(var(--i, 0) * 45ms);
+  animation: cardIn .5s var(--ease) backwards; animation-delay: calc(var(--i, 0) * 45ms);
 }
-.rise { animation: cardIn .45s var(--ease) backwards; animation-delay: calc(var(--i, 0) * 45ms); }
+.rise { animation: cardIn .5s var(--ease) backwards; animation-delay: calc(var(--i, 0) * 45ms); }
 @keyframes cardIn { from { opacity: 0; transform: translateY(14px); } }
 .card:active { transform: scale(.97); }
 

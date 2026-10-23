@@ -155,8 +155,22 @@ function nmPaidBannerScenes() {
   return new Promise(function (resolve) {
     var done = false;
     function fin(rows) { if (!done) { done = true; resolve(rows || []); } }
+    /* Primary source: /api/banner-live (service role). admin_banners is
+       RLS-locked with no public policy, so the direct client query below
+       ALWAYS returned empty and paid banners never showed. The endpoint
+       is the real feed; the client query stays only as a fallback. */
+    try {
+      fetch("/api/banner-live").then(function (r) { return r.json(); }).then(function (j) {
+        if (j && j.ok && j.scenes && j.scenes.length) {
+          fin(j.scenes.map(function (s) {
+            return { title: s.title, subtitle: s.subtitle, image_url: s.media_url, link_url: s.link_url || s.shop_url || "", starts_at: s.starts_at, ends_at: s.ends_at, is_active: true, sort_order: 0 };
+          }));
+        }
+      }).catch(function () {});
+    } catch (e) {}
     var waited = 0;
     var iv = setInterval(function () {
+      if (done) { clearInterval(iv); return; }
       waited += 500;
       var DB = null;
       try { DB = window.NM_DB; } catch (e) {}
@@ -264,8 +278,10 @@ function initAdBanner() {
       var sc = e.target.closest(".ad-scene[data-paid-link]");
       if (sc) {
         var link = sc.getAttribute("data-paid-link") || "";
+        var shopM = link.match(/[?&]shop=([0-9a-f-]{36})/i);
+        if (shopM && typeof window.NM_openStore === "function") { window.NM_openStore(shopM[1]); return; }
         if (/^\/(?!\/)/.test(link)) {
-          if (link.indexOf("/p/") === 0) { window.location.href = link; }
+          if (link.indexOf("/p/") === 0 || link.indexOf("/?") === 0) { window.location.href = link; }
           else if (typeof window.NM_show === "function") { window.NM_show(link.replace(/^\//, "")); }
           else { window.location.href = link; }
         } else if (/^https?:\/\//i.test(link)) { window.open(link, "_blank", "noopener"); }

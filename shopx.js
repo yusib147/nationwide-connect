@@ -17,7 +17,10 @@
   function DB() { return window.NM_DB; }
   function ngn(n) { return "\u20A6" + Number(n || 0).toLocaleString("en-NG"); }
   function isUuid(s) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(s || "")); }
-  function itemLink(id) { return location.origin + location.pathname + "?item=" + id; }
+  function itemLink(id, title) {
+    var slug = title ? String(title).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) : "";
+    return location.origin + "/p/" + (slug ? slug + "-" : "") + String(id).replace(/-/g, "");
+  }
   function shopLink(id) { return location.origin + location.pathname + "?shop=" + id; }
   function shareOut(title, text, url) {
     if (navigator.share) { navigator.share({ title: title, text: text, url: url }).catch(function () {}); return; }
@@ -154,7 +157,7 @@
     document.body.appendChild(ov);
     ov.addEventListener("click", function (e) { if (e.target === ov) { closeSheet(); } });
     $("#shx-x").addEventListener("click", closeSheet);
-    var link = itemLink(p.id);
+    var link = itemLink(p.id, p.title);
     $("#shx-a-wa").addEventListener("click", function () {
       var txt = (p.title || "Item") + " \u2014 " + ngn(p.price) + (p.location ? " (" + p.location + ")" : "") + "\nSee it and chat with the seller here:";
       window.open("https://wa.me/?text=" + encodeURIComponent(txt + "\n" + link), "_blank");
@@ -272,12 +275,18 @@
         + '<div class="shx-oc-stats"><span>\uD83D\uDC41 ' + Number(p.views || 0) + ' views</span><span>\uD83D\uDCE6 Stock: ' + qty + '</span><span>' + pill + '</span></div>'
         + '<div class="shx-oc-row"><button type="button" class="shx-oc-btn shx-oc-primary" data-act="share">\uD83D\uDD17 Share &amp; promote</button>'
         + '<button type="button" class="shx-oc-btn" data-act="sold">' + (sold ? "\u21A9 Back in stock" : "\u2713 Mark as sold") + '</button>'
-        + '<button type="button" class="shx-oc-btn" data-act="mine">\uD83D\uDCCB My listings</button></div>';
+        + '<button type="button" class="shx-oc-btn" data-act="mine">\uD83D\uDCCB My listings</button></div>'
+        + '<button type="button" class="shx-oc-promo' + ((p.promotedUntil && p.promotedUntil > Date.now()) ? " on" : "") + '" data-act="promote">'
+        + ((p.promotedUntil && p.promotedUntil > Date.now())
+          ? "\uD83D\uDE80 Promoted until " + new Date(p.promotedUntil).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) + " \u00B7 tap to extend"
+          : "\uD83D\uDE80 Promote to the top \u00B7 \u20A61,000 for 1 week")
+        + '</button>';
       anchor.parentNode.insertBefore(oc, card);
       oc.addEventListener("click", function (e) {
         var b = e.target && e.target.closest ? e.target.closest("[data-act]") : null; if (!b) { return; }
         var act = b.getAttribute("data-act");
         if (act === "share") { if (window.NM_shareProduct) { window.NM_shareProduct(p); } return; }
+        if (act === "promote") { if (window.NM_promoteSheet) { window.NM_promoteSheet(p); } return; }
         if (act === "mine") { if (window.NM_show) { window.NM_show("me"); } return; }
         if (act === "sold") {
           b.disabled = true;
@@ -473,10 +482,64 @@
     });
   }
 
+  /* Promoted listings (paid promote_7d) pin to the top of every list:
+     wrap listProducts once the DB is ready; promoted-first, then the
+     app's own order. Also publishes window.NM_PROMOTED for ribbons. */
+  function wrapList() {
+    var D = DB();
+    if (!D || !D.listProducts || D.listProducts._shxPromote) { return; }
+    var orig = D.listProducts;
+    var w = function () {
+      return orig.apply(null, arguments).then(function (rows) {
+        try {
+          if (!rows || !rows.length) { return rows; }
+          var now = Date.now(), promo = [], rest = [], map = {};
+          rows.forEach(function (p) {
+            if (p && p.promotedUntil && p.promotedUntil > now) { promo.push(p); map[p.id] = p.promotedUntil; }
+            else { rest.push(p); }
+          });
+          if (!promo.length) { return rows; }
+          promo.sort(function (a, b) { return b.promotedUntil - a.promotedUntil; });
+          window.NM_PROMOTED = map;
+          return promo.concat(rest);
+        } catch (e) { return rows; }
+      });
+    };
+    w._shxPromote = true;
+    D.listProducts = w;
+  }
+
+  window.NM_promoteSheet = function (p) {
+    closeSheet();
+    var promoted = p.promotedUntil && p.promotedUntil > Date.now();
+    var ov = document.createElement("div");
+    ov.className = "shx-ov"; ov.id = "shx-sheet-ov";
+    ov.innerHTML = '<div class="shx-sheet"><div class="shx-sheet-hd"><b>\uD83D\uDE80 Promote this item</b><button class="shx-x" id="shx-x" aria-label="Close">\u00D7</button></div>'
+      + '<div class="shx-prod">' + ((p.images && p.images[0]) ? '<img src="' + esc(p.images[0]) + '" alt="">' : "")
+      + '<span><b>' + esc(p.title || "") + '</b><i>' + ngn(p.price) + '</i></span></div>'
+      + '<p class="shx-promo-tx">Your item stays pinned at the <b>top of Home and its category</b> for <b>7 days</b>, with a \uD83D\uDE80 Promoted tag, so buyers see it first.'
+      + (promoted ? ' It is promoted until <b>' + new Date(p.promotedUntil).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) + '</b> \u2014 paying again adds 7 more days.' : '')
+      + '</p>'
+      + '<button class="shx-act" id="shx-promo-pay">Pay \u20A61,000 with Paystack</button>'
+      + '<button class="shx-act shx-ghost" id="shx-promo-no">Not now</button></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener("click", function (e) { if (e.target === ov) { closeSheet(); } });
+    $("#shx-x").addEventListener("click", closeSheet);
+    $("#shx-promo-no").addEventListener("click", closeSheet);
+    $("#shx-promo-pay").addEventListener("click", function () {
+      var b = this; b.disabled = true; b.textContent = "Opening Paystack\u2026";
+      DB().startPayment("promote_7d", p.id).catch(function (err) {
+        b.disabled = false; b.textContent = "Pay \u20A61,000 with Paystack";
+        toast((err && err.message) || "Could not start payment.");
+      });
+    });
+  };
+
   /* ---------------- init --------------------------------------------------- */
   function init() {
     wrapCreate();
     wrapStore();
+    wrapList();
     armDetail();
     return true;
   }

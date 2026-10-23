@@ -2,22 +2,22 @@
 
 /* Loadbar */
 #nv-bar{position:fixed;top:0;left:0;height:2.5px;width:0;background:linear-gradient(90deg,#f60,#ffb37a);z-index:99999;opacity:0;pointer-events:none;border-radius:0 3px 3px 0}
-#nv-bar.nv-run{opacity:1;width:74%;transition:width .4s cubic-bezier(.2,.7,.3,1)}
-#nv-bar.nv-done{width:100%;opacity:0;transition:width .14s ease,opacity .35s ease .06s}
+#nv-bar.nv-run{opacity:1;width:74%;transition:width .55s cubic-bezier(.32,.72,0,1)}
+#nv-bar.nv-done{width:100%;opacity:0;transition:width .18s ease,opacity .45s ease .08s}
 
 /* Screen arrival */
-.screen.nv-enter{animation:nvPageIn .26s ease both}
+.screen.nv-enter{animation:nvPageIn .38s cubic-bezier(.32,.72,0,1) both}
 @keyframes nvPageIn{from{opacity:.35;transform:translateY(5px)}to{opacity:1;transform:none}}
 
 /* Cards cascade in as they land */
-#home-grid>*,#cat-grid>*{animation:nvCardIn .38s cubic-bezier(.2,.7,.3,1) both}
-#home-grid>*:nth-child(2),#cat-grid>*:nth-child(2){animation-delay:.04s}
-#home-grid>*:nth-child(3),#cat-grid>*:nth-child(3){animation-delay:.08s}
-#home-grid>*:nth-child(4),#cat-grid>*:nth-child(4){animation-delay:.12s}
-#home-grid>*:nth-child(5),#cat-grid>*:nth-child(5){animation-delay:.16s}
-#home-grid>*:nth-child(6),#cat-grid>*:nth-child(6){animation-delay:.20s}
-#home-grid>*:nth-child(7),#cat-grid>*:nth-child(7){animation-delay:.24s}
-#home-grid>*:nth-child(8),#cat-grid>*:nth-child(8){animation-delay:.28s}
+#home-grid>*,#cat-grid>*{animation:nvCardIn .42s cubic-bezier(.32,.72,0,1) both}
+#home-grid>*:nth-child(2),#cat-grid>*:nth-child(2){animation-delay:.03s}
+#home-grid>*:nth-child(3),#cat-grid>*:nth-child(3){animation-delay:.06s}
+#home-grid>*:nth-child(4),#cat-grid>*:nth-child(4){animation-delay:.09s}
+#home-grid>*:nth-child(5),#cat-grid>*:nth-child(5){animation-delay:.12s}
+#home-grid>*:nth-child(6),#cat-grid>*:nth-child(6){animation-delay:.15s}
+#home-grid>*:nth-child(7),#cat-grid>*:nth-child(7){animation-delay:.18s}
+#home-grid>*:nth-child(8),#cat-grid>*:nth-child(8){animation-delay:.21s}
 @keyframes nvCardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 
 /* Skeleton placeholders */
@@ -41,6 +41,35 @@
 #home-grid,#cat-grid{gap:13px}
 
 @media (prefers-reduced-motion: reduce){
-  .screen.nv-enter,#home-grid>*,#cat-grid>*{animation:none!important}
+  .screen.nv-enter,#home-grid>*,#cat-grid>*,.nv-drop,.nv-drop>*,.nv-drop>*>*,#upd-grid>*,#notifs-body>*,.nv-blk{animation:none!important}
   #nv-bar{transition:none!important}
+  button,[role="button"],.btn-primary,.btn-secondary,.chip,.mini-btn,.pill,.sort-pill,.link-btn,.nav-btn,.shx-act,.card,.cat-row,.convo,.chat-cta,.nv-pressing{transform:none!important;transition:none!important;filter:none!important}
 }
+.nv-promo{position:absolute;top:8px;left:8px;background:#f60;color:#fff;font-size:10px;font-weight:800;letter-spacing:.5px;padding:3px 7px;border-radius:6px;z-index:3;box-shadow:0 2px 8px rgba(255,102,0,.45)}
+.card-photo:has(.nv-promo) .nv-new{top:36px}
+
+/* drop-in panels with cascading items (the category-directory feel, everywhere) */
+.nv-drop{animation:nvDropIn .5s cubic-bezier(.32,.72,0,1) both}
+@keyframes nvDropIn{from{opacity:0;translate:0 -16px;scale:.98}to{opacity:1;translate:0 0;scale:1}}
+.nv-drop>*,.nv-drop>*>*,#upd-grid>*,#notifs-body>*{animation:nvItemIn .55s cubic-bezier(.32,.72,0,1) backwards}
+.nv-drop>*:nth-child(2),.nv-drop>*>*:nth-child(2),#upd-grid>*:nth-child(2),#notifs-body>*:nth-child(2){animation-delay:.085s}
+.nv-drop>*:nth-child(3),.nv-drop>*>*:nth-child(3),#upd-grid>*:nth-child(3),#notifs-body>*:nth-child(3){animation-delay:.17s}
+.nv-drop>*:nth-child(4),.nv-drop>*>*:nth-child(4),#upd-grid>*:nth-child(4),#notifs-body>*:nth-child(4){animation-delay:.255s}
+.nv-drop>*:nth-child(5),.nv-drop>*>*:nth-child(5),#upd-grid>*:nth-child(5),#notifs-body>*:nth-child(5){animation-delay:.34s}
+.nv-drop>*:nth-child(6),.nv-drop>*>*:nth-child(6),#upd-grid>*:nth-child(6),#notifs-body>*:nth-child(6){animation-delay:.425s}
+.nv-drop>*:nth-child(7),.nv-drop>*>*:nth-child(7),#upd-grid>*:nth-child(7),#notifs-body>*:nth-child(7){animation-delay:.51s}
+.nv-drop>*:nth-child(8),.nv-drop>*>*:nth-child(8),#upd-grid>*:nth-child(8),#notifs-body>*:nth-child(8){animation-delay:.595s}
+.nv-drop>*:nth-child(n+9),.nv-drop>*>*:nth-child(n+9),#upd-grid>*:nth-child(n+9),#notifs-body>*:nth-child(n+9){animation-delay:.68s}
+@keyframes nvItemIn{from{opacity:0;translate:0 14px;scale:.96}55%{opacity:1;translate:0 -2px;scale:1.005}to{opacity:1;translate:0 0;scale:1}}
+
+/* press response on every button and bar */
+button,[role="button"],.btn-primary,.btn-secondary,.chip,.mini-btn,.pill,.sort-pill,.link-btn,.nav-btn,.shx-act,.card,.cat-row,.convo,.chat-cta{transition:transform .16s ease-out,background-color .15s ease,color .15s ease,border-color .15s ease}
+button:active,[role="button"]:active,.btn-primary:active,.btn-secondary:active,.chip:active,.mini-btn:active,.pill:active,.sort-pill:active,.link-btn:active,.nav-btn:active,.shx-act:active{transform:scale(.92)}
+.card:active,.cat-row:active,.convo:active,.chat-cta:active{transform:scale(.965)}
+
+/* whole-screen drop-list cascade on entry */
+.nv-blk{animation:nvItemIn .38s cubic-bezier(.32,.72,0,1) both}
+
+/* guaranteed press response (class-driven) */
+.nv-pressing{transform:scale(.9)!important;filter:brightness(.93)!important}
+.card.nv-pressing,.cat-row.nv-pressing,.convo.nv-pressing,.chat-cta.nv-pressing{transform:scale(.955)!important}

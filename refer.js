@@ -10,8 +10,8 @@
    unique index and the server cross-checks before and after assigning. */
 ;(function () {
   "use strict";
-  var PRICES = { bump_1: 100000, featured_7d: 500000, premium_1m: 100000, premium_promo_2m: 100000, premium_6m: 500000, banner_30d: 500000 };
-  var LABELS = { bump_1: "Promote listing", featured_7d: "Featured 2 weeks", premium_1m: "Premium", premium_promo_2m: "Launch promo Premium", premium_6m: "Premium 6 months", banner_30d: "Home banner 2 weeks" };
+  var PRICES = { bump_1: 100000, promote_7d: 100000, featured_7d: 500000, premium_1m: 100000, premium_promo_2m: 100000, premium_6m: 500000, banner_30d: 500000 };
+  var LABELS = { bump_1: "Bump listing", promote_7d: "Promote 1 week", featured_7d: "Featured 2 weeks", premium_1m: "Premium", premium_promo_2m: "Launch promo Premium", premium_6m: "Premium 6 months", banner_30d: "Home banner 2 weeks" };
   function $(s, r) { return (r || document).querySelector(s); }
   function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
   function naira(k) { return "₦" + (Math.max(0, Number(k) || 0) / 100).toLocaleString("en-NG", { maximumFractionDigits: 0 }); }
