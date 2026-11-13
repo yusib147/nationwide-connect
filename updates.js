@@ -1664,7 +1664,7 @@ html[data-theme="dark"] .loc-sh{background:#1d130a;color:#f5ead8}
       var orig = DB.startPayment.bind(DB);
       DB.startPayment = function (plan, targetId) {
         window.NM_loadbarStart();
-        toast("Opening secure checkout\u2026");
+        toast("Opening payment\u2026");
         return orig(plan, targetId).then(function (r) { return r; }, function (e) {
           window.NM_loadbarDone();
           toast((e && e.message) || "Could not start payment. Check your connection.");

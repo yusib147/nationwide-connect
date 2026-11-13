@@ -349,7 +349,7 @@
         return Promise.reject(new Error("Password reset needs a real account. Log in with your phone number."));
       }
       return self.client.auth.resetPasswordForEmail(email, {
-        redirectTo: "https://nationwide-connect-demo1-skepterforge1471-8639s-projects.vercel.app/"
+        redirectTo: "https://nationwidemediaconnect.com/"
       }).then(function (res) {
         if (res.error) { throw res.error; }
         return true;

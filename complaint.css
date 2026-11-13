@@ -1,0 +1,30 @@
+/* Complaints & Support (complaint.js) */
+.nm-cmp-page{position:fixed;inset:0;z-index:99985;background:var(--bg,#f6f6f4);display:none}
+.nm-cmp-page.open{display:block}
+.nm-cmp-wrap{height:100%;display:flex;flex-direction:column;max-width:880px;margin:0 auto;background:var(--bg,#f6f6f4)}
+.nm-cmp-top{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--chrome,#fff);border-bottom:1px solid var(--line-soft,#e6e2da)}
+.nm-cmp-top h2{font-size:16.5px;font-weight:800;color:var(--ink,#191922);margin:0}
+.nm-cmp-body{flex:1;overflow-y:auto;padding:14px 14px 30px;-webkit-overflow-scrolling:touch}
+.nm-cmp-intro{font-size:13.5px;color:var(--card-mut,#6d6d78);line-height:1.55;margin:0 0 14px}
+.nm-cmp-form{background:var(--card,#fff);border:1px solid var(--line-soft,#e6e2da);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:11px}
+.nm-cmp-form label{font-size:13px;font-weight:700;color:var(--ink,#191922);display:flex;flex-direction:column;gap:5px}
+.nm-cmp-form select,.nm-cmp-form input,.nm-cmp-form textarea{font:inherit;font-weight:500;padding:11px 12px;border:1px solid var(--line-soft,#e0ddd4);border-radius:10px;background:var(--bg,#fafaf8);color:var(--ink,#191922);width:100%;box-sizing:border-box}
+.nm-cmp-form textarea{resize:vertical}
+.nm-cmp-send{background:var(--pri,#e8380d);color:#fff;border:0;border-radius:11px;padding:13px;font-size:15px;font-weight:800;cursor:pointer}
+.nm-cmp-send:disabled{opacity:.55}
+.nm-cmp-h{font-size:15px;font-weight:800;margin:20px 0 10px;color:var(--ink,#191922)}
+.nm-cmp-empty{font-size:13.5px;color:var(--card-mut,#6d6d78)}
+.nm-cmp-card{background:var(--card,#fff);border:1px solid var(--line-soft,#e6e2da);border-radius:14px;padding:13px 14px;margin-bottom:10px}
+.nm-cmp-cardtop{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.nm-cmp-cat{font-size:11px;font-weight:800;background:#eef1f5;color:#33475b;border-radius:999px;padding:3px 9px}
+.nm-cmp-status{font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;margin-left:auto}
+.nm-cmp-status.st-open{background:#fff3d6;color:#8a6d00}
+.nm-cmp-status.st-in_progress{background:#e4ecfd;color:#274b9f}
+.nm-cmp-status.st-resolved{background:#e4f6ec;color:#12703c}
+.nm-cmp-status.st-closed{background:#eef1f5;color:#5b6b7a}
+.nm-cmp-card b{font-size:14.5px;color:var(--ink,#191922)}
+.nm-cmp-msg-t{font-size:13.5px;color:var(--ink,#191922);line-height:1.5;margin:5px 0;white-space:pre-wrap;word-break:break-word}
+.nm-cmp-date{font-size:12px;color:var(--card-mut,#6d6d78)}
+.nm-cmp-reply{background:#f2f8f3;border:1px solid #d8ecd9;border-radius:10px;padding:10px 12px;margin-top:10px}
+.nm-cmp-reply b{font-size:12.5px;color:#12703c}
+.nm-cmp-reply p{font-size:13.5px;margin:4px 0 0;line-height:1.5;white-space:pre-wrap;word-break:break-word}

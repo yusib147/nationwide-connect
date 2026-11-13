@@ -1,7 +1,8 @@
 /* shopx.css — Mini-shops, inventory, cross-posting (2026-10-19). Loaded last. */
 
 /* ------- Store: cover, info, share, highlights, groups ------- */
-.shx-cover{position:relative;height:150px;border-radius:0 0 18px 18px;overflow:hidden;background:linear-gradient(120deg,#e8380d,#ff7a3d)}
+.shx-cover{position:relative;height:104px;border-radius:0 0 18px 18px;overflow:hidden;background:linear-gradient(120deg,#e8380d,#ff7a3d)}
+.shx-cover.grad{height:68px}
 .shx-cover img{width:100%;height:100%;object-fit:cover;display:block}
 .shx-cover-tag{position:absolute;left:12px;bottom:10px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;font-weight:700;padding:5px 10px;border-radius:999px;backdrop-filter:blur(4px)}
 .shx-infoline{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 16px 0;font-size:13px;color:var(--muted,#666)}
@@ -86,3 +87,22 @@
 .chat-cta{padding-left:10px;padding-right:10px}
 .chat-cta .cta-row{display:flex;gap:8px}
 .chat-cta .cta-row>*{flex:1 1 0!important;min-width:0;justify-content:center;text-align:center}
+
+/* ---- Store page: distinct sections with boundaries (2026-10-26 fix2) ----
+   The identity colours live HERE, in a linked stylesheet, scoped to the
+   store2 structure — not only in extras.js's runtime-injected <style>.
+   The legacy .store-hero name stays white: its hero is dark by design. */
+#screen-seller .store2{padding:14px 14px 26px}
+#screen-seller .store2 .store-name{color:var(--ink)}
+#screen-seller .store2 .store-meta{color:var(--muted)}
+#screen-seller .store-hero .store-name{color:#fff}
+#screen-seller .store-hero .store-meta{color:rgba(255,255,255,.65)}
+#screen-seller .shx-cover{border-radius:18px}
+#screen-seller .store2-hero{background:var(--chrome);border:1px solid var(--line-soft);border-radius:18px;padding:14px;margin-top:12px;box-shadow:var(--shadow-card)}
+#screen-seller .store2-id .store-pres{display:flex;justify-content:flex-start;text-align:left;margin-top:6px}
+#screen-seller .store2-stats{margin-top:14px}
+#screen-seller .shx-infoline{padding:10px 2px 0}
+#screen-seller .shx-sharerow{padding:12px 0 0}
+#screen-seller .shx-high{padding:14px 0 0}
+#screen-seller .store2-acts{margin-top:12px}
+#screen-seller .store2-head{margin:20px 0 12px;padding-top:18px;border-top:1px solid var(--line-soft)}

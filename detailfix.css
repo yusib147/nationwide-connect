@@ -1,0 +1,22 @@
+/* Nationwide Media Connect — detailfix.css (2026-10-26)
+   Product-page declutter support + the WhatsApp CTA on the item page. */
+
+/* Classes toggled by detailfix.js */
+.df-hide { display: none !important; }
+
+/* Declutter: the gallery's zoom-hint paragraph ("Swipe or tap a
+   thumbnail. Tap a photo to zoom.") is instructional dead space under
+   every gallery. Tap-to-zoom itself still works; the thumbnails stay
+   as the multi-photo navigation. */
+#detail-body .gal-zoom-hint { display: none; }
+
+/* WhatsApp action in the sticky CTA row (sits beside Chat seller and
+   Call; shopx.css already gives every .cta-row child an equal flex
+   share, so three actions sit in one row without stacking). */
+.cta-row .df-wa {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  color: #128c4b; text-decoration: none;
+}
+html[data-theme="dark"] .cta-row .df-wa { color: #2fe07a; }
+.cta-row .df-wa .df-wa-ic { display: inline-flex; color: #25d366; }
+.cta-row .df-wa .df-wa-ic svg { display: block; }

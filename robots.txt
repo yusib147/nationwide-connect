@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://nationwide-connect-demo1-skepterforge1471-8639s-projects.vercel.app/sitemap.xml
+Sitemap: https://nationwidemediaconnect.com/sitemap.xml

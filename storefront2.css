@@ -1,0 +1,39 @@
+/* Nationwide Media Connect — storefront2.css (2026-10-25)
+   Glow highlight for the product a visitor tapped, on the seller's store
+   page, plus the WhatsApp action on the store page. Brand language:
+   orange ring + warm gold halo, two pulses, then it lets go. Reduced
+   motion (OS setting or the app's own toggle, mirrored by the .sf-glow-
+   still class from storefront2.js) gets a steady outline instead. */
+
+.store-row.sf-glow {
+  border-color: var(--acc, #ff5a1f);
+  /* The class is now held by storefront2.js until the user interacts
+     or ~15s pass (2026-10-26), so the pulse loops and a resting ring
+     stays visible between pulses — it cannot burn out unseen during
+     a slow render or a smooth scroll the way the old 2-pulse/3s
+     version did. */
+  box-shadow: 0 0 0 2px rgba(255, 90, 31, .55), 0 0 16px 3px rgba(255, 176, 32, .35);
+  animation: sfGlowPulse 1.15s ease-in-out infinite;
+}
+@keyframes sfGlowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 90, 31, 0); }
+  30% { box-shadow: 0 0 0 3px rgba(255, 90, 31, .85), 0 0 24px 5px rgba(255, 176, 32, .55); }
+  55% { box-shadow: 0 0 0 1px rgba(255, 90, 31, .35), 0 0 10px 2px rgba(255, 176, 32, .25); }
+  80% { box-shadow: 0 0 0 3px rgba(255, 90, 31, .85), 0 0 24px 5px rgba(255, 176, 32, .55); }
+}
+.store-row.sf-glow-still {
+  border-color: var(--acc, #ff5a1f);
+  box-shadow: 0 0 0 3px rgba(255, 90, 31, .8), 0 0 18px 4px rgba(255, 176, 32, .4);
+}
+@media (prefers-reduced-motion: reduce) {
+  .store-row.sf-glow { animation: none; box-shadow: 0 0 0 3px rgba(255, 90, 31, .8); }
+}
+
+/* WhatsApp action on the seller store page (sits in the .store2-acts row) */
+.store2-act.sf-wa {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  text-decoration: none; color: #128c4b;
+}
+html[data-theme="dark"] .store2-act.sf-wa { color: #2fe07a; }
+.store2-act.sf-wa .sf-wa-ic { display: inline-flex; color: #25d366; }
+.store2-act.sf-wa .sf-wa-ic svg { display: block; }

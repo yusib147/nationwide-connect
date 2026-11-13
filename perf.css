@@ -1,0 +1,16 @@
+/* Nationwide Media Connect — performance styles (2026-11-02).
+   Loaded LAST so these rules win over the base stylesheets.
+   1. content-visibility lets the browser skip rendering off-screen cards:
+      the home grid stops paying layout/paint cost for listings the user
+      has not scrolled to, which is the scroll lag on low-end phones.
+      Browsers without support ignore the rule and render normally.
+   2. The bottom nav's 18px backdrop blur repaints on every scroll frame;
+      10px keeps the same glass look at roughly half the GPU cost. */
+.card, .rv-item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 340px;
+}
+#bottomnav {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}

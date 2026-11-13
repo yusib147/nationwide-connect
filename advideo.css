@@ -1,0 +1,13 @@
+/* Nationwide Media Connect — advideo.css (2026-11-03).
+   Companion to advideo.js: once an advert video can actually play, its
+   stage stops the infinite loading-shimmer animation (a repaint loop
+   that otherwise runs forever underneath the video — pure scroll jank
+   on budget phones). The blurred backdrop video is a frozen first
+   frame now, so nothing here animates per frame. */
+.adfit.adv-ready,
+.ad-stage.adv-ready,
+.ad-grid-media.adv-ready {
+  animation: none !important;
+  background-image: none !important;
+}
+video.adfit-bg { will-change: auto; }

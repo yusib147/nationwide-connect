@@ -194,7 +194,7 @@
     if (!screen || !screen.classList.contains("active") || !SB()) { return; }
     SB().from("profiles").select("state,lga,address").eq("id", sid).maybeSingle().then(function (r) {
       var d = r && r.data;
-      if (!d || (!d.state && !d.address)) { return; }
+      if (!d || (!d.state && !d.address && !d.lga)) { return; }
       var scr = document.getElementById("screen-seller");
       if (!scr || !scr.classList.contains("active")) { return; }
       var prev = document.getElementById("nm-store-loc");
@@ -207,7 +207,7 @@
       line.setAttribute("data-sid", String(sid));
       line.style.cssText = "margin:10px 14px 0;font-size:13.5px;font-weight:700;color:var(--muted)";
       var txt = "";
-      if (d.lga && d.state) { txt = d.lga + ", " + d.state; } else if (d.state) { txt = d.state; }
+      if (d.lga && d.state) { txt = d.lga + ", " + d.state; } else if (d.state) { txt = d.state; } else if (d.lga) { txt = d.lga; }
       if (d.address) { txt += (txt ? " · " : "") + d.address; }
       line.textContent = "📍 " + txt;
       hero.parentNode.insertBefore(line, hero.nextSibling);

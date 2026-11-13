@@ -305,23 +305,20 @@
       /* M12/D15: clearer ping label */
       var ping = $("#d-ping");
       if (ping && ping.textContent.indexOf("Check availability") < 0) ping.innerHTML = "✓ Check availability";
-      /* M14/D14 + D18: split condition out of the meta line; add Ad ID + date */
+      /* M14/D14: split condition out of the meta line. DECLUTTER
+         (2026-10-26): the condition chip and the Ad ID line that used
+         to be inserted here are GONE — shopx's facts card shows both
+         (Condition row, Ad ID row), so the page carried condition
+         three times and the Ad ID twice. The split itself stays, so
+         the meta line is just "location · time" and each fact lives
+         in exactly one place: the facts card. */
       var meta = $(".detail-meta", body);
       if (meta && detailDoneFor !== p.id) {
         detailDoneFor = p.id;
         var parts = meta.textContent.split("·").map(function (s) { return s.trim(); });
         var conds = ["new", "used", "refurbished", "for parts", "like new"];
         if (parts.length >= 3 && conds.indexOf((parts[1] || "").toLowerCase()) >= 0) {
-          var cond = parts[1];
           meta.textContent = parts[0] + " · " + parts.slice(2).join(" · ");
-          var chip = document.createElement("div");
-          chip.className = "ux-cond-chip"; chip.innerHTML = "<i>Condition</i> " + esc(cond);
-          meta.parentNode.insertBefore(chip, meta.nextSibling);
-          var adid = document.createElement("div");
-          adid.className = "ux-adid";
-          var when = p.at ? new Date(p.at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "";
-          adid.textContent = "Ad ID " + String(p.id).slice(0, 8).toUpperCase() + (when ? " · Posted " + when : "");
-          chip.parentNode.insertBefore(adid, chip.nextSibling);
         }
       }
       /* M13/D16: call the seller */
@@ -448,9 +445,12 @@
       if (!empty || empty.hidden) return;
       DB().listProducts({}).then(function (ps) {
         if (!ps || !ps.length || $("#ux-suggest")) return;
+        var myId = null;
+        try { var cu = JSON.parse(localStorage.getItem("nc2_cached_user") || "null"); myId = (cu && (cu.id || cu.user_id)) || null; } catch (e) {}
         var bySeller = {};
         ps.forEach(function (p) {
           if (!p.sellerId) return;
+          if (myId && String(p.sellerId) === String(myId)) return;
           if (!bySeller[p.sellerId]) bySeller[p.sellerId] = { id: p.sellerId, name: p.sellerName || "Seller", avatar: p.sellerAvatar || "", n: 0, loc: p.location || "" };
           bySeller[p.sellerId].n++;
         });
@@ -466,17 +466,34 @@
           }).join("");
         var anchor = $("#upd-listings") || empty;
         anchor.parentNode.insertBefore(host, anchor);
+        function paintFollow(b, following) {
+          b.setAttribute("data-state", following ? "following" : "");
+          b.textContent = following ? "Following" : "Follow";
+          b.classList.toggle("ux-on", !!following);
+          b.disabled = false;
+        }
         DB().followingIds().then(function (ids) {
+          var have = (ids || []).map(function (x) { return String(x); });
           $$("[data-ux-follow]", host).forEach(function (b) {
-            if (ids.indexOf(b.getAttribute("data-ux-follow")) >= 0) { b.textContent = "Following"; b.disabled = true; }
+            paintFollow(b, have.indexOf(String(b.getAttribute("data-ux-follow"))) >= 0);
           });
         }).catch(function () {});
         $$("[data-ux-follow]", host).forEach(function (b) {
           b.addEventListener("click", function () {
+            if (b._uxBusy) return;
             var id = b.getAttribute("data-ux-follow");
-            b.disabled = true; b.textContent = "Following…";
-            DB().followSeller(id).then(function () { b.textContent = "Following"; toast("You are now following this seller"); })
-              .catch(function () { b.disabled = false; b.textContent = "Follow"; toast("Please sign in to follow sellers"); });
+            var was = b.getAttribute("data-state") === "following";
+            b._uxBusy = true; b.disabled = true; b.textContent = was ? "Unfollowing…" : "Following…";
+            var act = was ? DB().unfollowSeller(id) : DB().followSeller(id);
+            act.then(function () {
+              b._uxBusy = false;
+              paintFollow(b, !was);
+              toast(was ? "Unfollowed" : "You are now following this seller");
+            }).catch(function (e) {
+              b._uxBusy = false;
+              paintFollow(b, was);
+              toast((e && e.message) || "Could not update follow. Try again.");
+            });
           });
         });
       }).catch(function () {});

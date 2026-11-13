@@ -24,7 +24,10 @@
 .store2-hero .seller-ava{width:78px;height:78px;border-radius:50%;font-size:30px;border:3px solid var(--acc);flex:none;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--chrome2);color:var(--ink);font-weight:800}
 .store2-hero .seller-ava img{width:100%;height:100%;object-fit:cover}
 .store2-id{flex:1;min-width:0;padding-top:2px}
-.store2-id .store-name{font-size:20px}
+.store2-id .store-name{font-size:20px;color:var(--ink);line-height:1.25;overflow-wrap:anywhere}
+.store2-id .store-meta{font-size:13px;color:var(--muted);font-weight:600;margin-top:4px}
+.store2-id .store-pres{justify-content:flex-start;margin:5px 0 0}
+.store2[data-mine="1"] .store2-actions,.store2[data-mine="1"] .store2-acts,.store2[data-mine="1"] #store-follow{display:none!important}
 .store2-tier{font-size:13px;color:var(--muted);font-weight:600;margin-top:3px}
 .store2-actions{display:flex;flex-direction:column;gap:9px;width:118px;flex:none}
 .store2-actions .follow-btn{background:var(--acc-grad);color:#fff;border:0;border-radius:999px;padding:11px 8px;font-weight:800;font-size:14px;width:100%;cursor:pointer;font-family:inherit}
@@ -104,7 +107,7 @@ html[data-theme="dark"] .sheet2{background:#1d130a;color:#f5ead8}
       var t = map && map[sellerId];
       if (t && t.count) { return Math.round((t.total / t.count) / 5 * 100) + "%"; }
     } catch (e) {}
-    return "New";
+    return "—";
   }
   var SORT_LABEL = { new: "Newest", lo: "Price ↑", hi: "Price ↓" };
   var _ctx = null; /* {sellerId, prof, rows, sort, tierLabel, name} */
@@ -263,10 +266,20 @@ html[data-theme="dark"] .sheet2{background:#1d130a;color:#f5ead8}
           var tick = tier ? ' <span class="vtick wa-fixed wa-' + esc(tier) + '">✓</span>' : "";
           var days = storeDays(pr && pr.created_at);
           _ctx = { sellerId: String(sellerId), prof: pr || {}, rows: rows, sort: "new", tierLabel: tier ? cap(tier) : "", name: nm };
-          var mine = String(me() || "") === String(sellerId);
-          var dist = rows.length && rows[0].distKm != null ? " · 📍 " + fmtKm(rows[0].distKm) + " from you" : "";
+          var _sessId = null;
+          try {
+            for (var ki = 0; ki < localStorage.length; ki++) {
+              var kk = localStorage.key(ki);
+              if (kk && /^sb-.+-auth-token$/.test(kk)) {
+                var sj = JSON.parse(localStorage.getItem(kk) || "null");
+                if (sj && sj.user && sj.user.id) { _sessId = sj.user.id; break; }
+              }
+            }
+          } catch (e) {}
+          var mine = String(me() || "") === String(sellerId) || (_sessId != null && String(_sessId) === String(sellerId));
+          var dist = (!mine && rows.length && rows[0].distKm != null && Number(rows[0].distKm) >= 0.1) ? " · 📍 " + fmtKm(rows[0].distKm) + " from you" : "";
           if (!body) { return; }
-          body.innerHTML = '<div class="store2">' +
+          body.innerHTML = '<div class="store2"' + (mine ? ' data-mine="1"' : "") + '>' +
             '<div class="store2-hero">' + avaH +
             '<div class="store2-id"><div class="store-name">' + esc(nm) + tick + "</div>" +
             '<div class="store-meta">Member since ' + esc(since) + dist + "</div>" +

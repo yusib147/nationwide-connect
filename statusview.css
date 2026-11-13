@@ -1,0 +1,40 @@
+/* statusview.css — WhatsApp-style status viewer + status UX fixes (2026-11-04).
+   Pairs with statusview.js. Loaded after statusx.css. */
+
+/* ------- Viewer shell: entrance + blurred backdrop ------- */
+#status-root .sv2{animation:svfade .28s ease}
+@keyframes svfade{from{opacity:0}to{opacity:1}}
+#status-root .sv-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:blur(26px) brightness(.5);transform:scale(1.25);z-index:0}
+#status-root .sv2 .stv-segs,#status-root .sv2 .stv-hd{position:relative;z-index:3}
+#status-root .sv2 .stv-md{z-index:1}
+#status-root .sv2 .stv-cp{position:relative;z-index:3}
+#status-root .sv2 .stv-del{z-index:3}
+
+/* ------- Loading screen (viewer + preview splash) ------- */
+#status-root .sv-load{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff;background:rgba(0,0,0,.35);z-index:4}
+#status-root .sv-load.sv-splash{background:#000}
+#status-root .sv-ring{width:52px;height:52px;flex:none;border-radius:50%;border:3.5px solid rgba(255,255,255,.16);border-top-color:#ff5a1f;animation:svspin .8s linear infinite}
+#status-root .sv-ring.sm{width:18px;height:18px;border-width:2.5px}
+@keyframes svspin{to{transform:rotate(360deg)}}
+#status-root .sv-load-t{font-size:13px;letter-spacing:.4px;opacity:.85}
+#status-root .sv-skel{display:block;width:38px;height:38px;border-radius:50%;background:linear-gradient(100deg,#2c2c2e 40%,#3d3d40 50%,#2c2c2e 60%);background-size:200% 100%;animation:svshim 1.2s linear infinite}
+@keyframes svshim{from{background-position:180% 0}to{background-position:-80% 0}}
+
+/* ------- Media reveal ------- */
+#status-root .sv-media{max-width:100%;max-height:100%;object-fit:contain;animation:svpop .32s ease}
+@keyframes svpop{from{opacity:0;transform:scale(1.035)}to{opacity:1;transform:scale(1)}}
+
+/* ------- WhatsApp tap zones: invisible (kills the extras.js chevron overlay
+   in the kept original preview) ------- */
+#status-root .stv-tap{background:transparent!important;border:0!important;color:transparent!important;text-shadow:none!important;opacity:0!important;font-size:0!important}
+
+/* ------- Preview error card (never a silent skip/vanish) ------- */
+#status-root .sv-err{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:28px;text-align:center;color:#fff;background:rgba(0,0,0,.45);z-index:4}
+#status-root .sv-err-t{font-size:16px;font-weight:800}
+#status-root .sv-err-s{font-size:13.5px;line-height:1.55;opacity:.8;max-width:300px}
+
+/* ------- Composer: preparing pill + honest post progress ------- */
+#status-root .sv-prep{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(112px + env(safe-area-inset-bottom));z-index:6;display:flex;align-items:center;gap:9px;background:rgba(18,14,10,.92);color:#fff;font-size:13px;font-weight:600;padding:10px 16px;border-radius:999px;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+#status-root .sv-prep[hidden]{display:none}
+#status-root .stc-bar.on i{animation:svpost 1.15s ease-in-out infinite alternate}
+@keyframes svpost{from{width:14%}to{width:82%}}

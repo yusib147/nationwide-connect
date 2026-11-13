@@ -25,9 +25,23 @@ module.exports = async function (req, res) {
   if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }
 
   var fn = null, payload = null, table = null, id = null;
-  if (body.conversation_id) { fn = "check-chat"; id = String(body.conversation_id); payload = { conversation_id: id }; table = "conversations"; }
+  var photoImg = null;
+  if (body.photo_check) {
+    /* Signup photo validation (2026-10-25): the client sends the cropped
+       256px JPEG as a data URL; the check-photo Edge Function classifies
+       it (real human photograph vs logo/product/illustration/...). No RLS
+       target row exists for this branch — the session token + rate limit
+       below are the gate, same as the other branches. */
+    photoImg = String(body.photo_check);
+    if (!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(photoImg) || photoImg.length > 200000) {
+      res.status(400).send(JSON.stringify({ error: "photo_check must be a jpeg data URL under 200KB" }));
+      return;
+    }
+    fn = "check-photo"; payload = { image: photoImg }; id = "photo";
+  }
+  else if (body.conversation_id) { fn = "check-chat"; id = String(body.conversation_id); payload = { conversation_id: id }; table = "conversations"; }
   else if (body.product_id) { fn = "check-listing"; id = String(body.product_id); payload = { product_id: id }; table = "products"; }
-  if (!fn || !UUID_RE.test(id)) {
+  if (!fn || (fn !== "check-photo" && !UUID_RE.test(id))) {
     res.status(400).send(JSON.stringify({ error: "valid conversation_id or product_id required" }));
     return;
   }
@@ -69,7 +83,8 @@ module.exports = async function (req, res) {
   rec.at = now; rec.count++; scanLog[uid] = rec;
 
   // --- caller must be able to see the target row under RLS ---
-  try {
+  // (photo branch has no target row; token + rate limit above are its gate)
+  if (fn !== "check-photo") try {
     var vr = await fetch(SUPABASE_URL + "/rest/v1/" + table + "?id=eq." + encodeURIComponent(id) + "&select=id", {
       headers: { "apikey": SUPABASE_ANON, "Authorization": "Bearer " + token }
     });

@@ -4,7 +4,7 @@
 var SUPABASE_URL = "https://qxcifjxytdixiolvkmtv.supabase.co";
 var SERVICE = process.env.SUPABASE_SERVICE_ROLE || "";
 var PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || "";
-var SITE = "https://nationwide-connect-demo1-skepterforge1471-8639s-projects.vercel.app";
+var SITE = "https://nationwidemediaconnect.com";
 
 // Manual bank-transfer mode (Ibrahim, 2026-10-23): Paystack checkout is
 // PAUSED, not removed. While MANUAL_MODE is true, /api/pay-init refuses,

@@ -1,0 +1,177 @@
+/* Nationwide Media Connect — premiumhub.css (2026-10-25)
+   Premium status card (Me), plan sheet, Premium Centre page, welcome sheet.
+   Gold identity matches the app's gold tick: gradient #ffd166 -> #c98a2d.
+   All surfaces use theme vars so LIGHT CLEAN and OLED BLACK both work. */
+.phub-card {
+  margin: 12px 14px 4px;
+  border-radius: 18px;
+  padding: 16px;
+  background: var(--card, #fff);
+  border: 1px solid var(--line-soft, #efeff3);
+  box-shadow: var(--shadow-card, 0 8px 24px rgba(20,20,28,.08));
+  position: relative;
+  overflow: hidden;
+}
+.phub-card::before {
+  content: "";
+  position: absolute; inset: 0 0 auto 0; height: 4px;
+  background: linear-gradient(90deg, #ffd166, #c98a2d);
+}
+.phub-card.urgent::before { background: linear-gradient(90deg, #ffb02e, #e8380d); }
+.phub-card.expired { opacity: .96; }
+.phub-card.expired::before { background: var(--line, #e6e6eb); }
+.phub-top { display: flex; align-items: center; gap: 10px; }
+.phub-crown {
+  width: 40px; height: 40px; border-radius: 12px; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center; font-size: 21px;
+  background: linear-gradient(135deg, #ffd166, #c98a2d); color: #5a3c05;
+}
+.phub-card.expired .phub-crown { background: var(--input, #f0f0f4); }
+.phub-title { font-size: 16px; font-weight: 800; color: var(--ink); line-height: 1.2; }
+.phub-sub { font-size: 12.5px; color: var(--card-mut, #6d6d78); margin-top: 2px; line-height: 1.35; }
+.phub-big {
+  font-size: 22px; font-weight: 800; color: var(--ink); margin: 12px 0 2px;
+  letter-spacing: -.01em;
+}
+.phub-big .phub-gold { background: linear-gradient(135deg, #c98a2d, #a86e14); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.phub-until { font-size: 13px; color: var(--card-mut, #6d6d78); }
+.phub-bar {
+  height: 8px; border-radius: 99px; background: var(--input, #f0f0f4);
+  margin: 12px 0 4px; overflow: hidden;
+}
+.phub-bar i {
+  display: block; height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, #ffd166, #c98a2d);
+  transition: width .6s var(--ease, ease);
+}
+.phub-card.urgent .phub-bar i { background: linear-gradient(90deg, #ffb02e, #e8380d); }
+.phub-barlab { font-size: 11.5px; color: var(--faint, #82828c); }
+.phub-benefits { margin: 10px 0 2px; padding: 0; list-style: none; }
+.phub-benefits li {
+  font-size: 13.5px; color: var(--ink); padding: 3px 0 3px 24px; position: relative; line-height: 1.35;
+}
+.phub-benefits li::before { content: "✓"; position: absolute; left: 2px; top: 3px; color: #c98a2d; font-weight: 800; }
+.phub-actions { display: flex; gap: 8px; margin-top: 14px; }
+.phub-btn {
+  flex: 1; border: 0; border-radius: 12px; padding: 13px 12px; cursor: pointer;
+  font-size: 14.5px; font-weight: 800; min-height: 48px;
+  background: linear-gradient(135deg, #ffd166, #c98a2d); color: #4a3203;
+}
+.phub-btn:active { transform: scale(.98); }
+.phub-btn.ghost {
+  background: var(--input, #f0f0f4); color: var(--ink); font-weight: 700; flex: 0 0 auto; padding: 13px 14px;
+}
+.phub-card.urgent .phub-btn { background: linear-gradient(135deg, #ff5a1f, #e8380d); color: #fff; }
+.phub-warn {
+  display: flex; gap: 8px; align-items: flex-start;
+  background: rgba(232, 56, 13, .09); border: 1px solid rgba(232, 56, 13, .28);
+  border-radius: 12px; padding: 10px 12px; margin-top: 12px;
+  font-size: 13px; color: var(--ink); line-height: 1.4;
+}
+.phub-warn button {
+  margin-left: auto; flex: 0 0 auto; background: none; border: 0; cursor: pointer;
+  color: var(--card-mut, #6d6d78); font-size: 15px; padding: 2px 4px; min-width: 32px; min-height: 32px;
+}
+
+/* ---------- plan sheet + welcome sheet ---------- */
+.phub-scrim {
+  position: fixed; inset: 0; z-index: 99990; background: rgba(10, 10, 14, .62);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+@media (min-width: 1024px) { .phub-scrim { align-items: center; } }
+.phub-sheet {
+  background: var(--card, #fff); color: var(--ink); width: 100%; max-width: 520px;
+  max-height: 92vh; overflow-y: auto; border-radius: 22px 22px 0 0; padding: 18px 18px 26px;
+}
+@media (min-width: 1024px) { .phub-sheet { border-radius: 22px; } }
+.phub-sheet-head { display: flex; align-items: flex-start; gap: 10px; }
+.phub-sheet-head h3 { margin: 0; font-size: 19px; font-weight: 800; }
+.phub-sheet-head .phub-sub { margin-top: 3px; }
+.phub-x {
+  margin-left: auto; flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%;
+  border: 0; background: var(--input, #f0f0f4); color: var(--ink); font-size: 16px; cursor: pointer;
+}
+.phub-statusline {
+  margin: 14px 0 4px; border-radius: 12px; padding: 11px 13px; font-size: 13.5px; line-height: 1.45;
+  background: rgba(201, 138, 45, .12); border: 1px solid rgba(201, 138, 45, .35); color: var(--ink);
+}
+.phub-plans { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.phub-plan {
+  text-align: left; width: 100%; cursor: pointer; position: relative;
+  border: 1.5px solid var(--line, #e6e6eb); background: var(--card, #fff); color: var(--ink);
+  border-radius: 16px; padding: 14px; min-height: 48px;
+}
+.phub-plan:active { transform: scale(.99); }
+.phub-plan.hot { border-color: #c98a2d; box-shadow: 0 6px 18px rgba(201, 138, 45, .18); }
+.phub-plan-badge {
+  position: absolute; top: -9px; right: 12px; font-size: 10.5px; font-weight: 800; letter-spacing: .04em;
+  background: linear-gradient(135deg, #ffd166, #c98a2d); color: #4a3203;
+  padding: 3px 9px; border-radius: 99px; text-transform: uppercase;
+}
+.phub-plan-row { display: flex; align-items: baseline; gap: 8px; }
+.phub-plan-name { font-size: 15.5px; font-weight: 800; }
+.phub-plan-term { font-size: 12.5px; color: var(--card-mut, #6d6d78); font-weight: 600; }
+.phub-plan-price { margin-left: auto; font-size: 19px; font-weight: 800; white-space: nowrap; }
+.phub-plan-per { display: block; font-size: 12.5px; color: var(--card-mut, #6d6d78); margin-top: 3px; }
+.phub-plan-perk { display: block; font-size: 13px; color: var(--ink); margin-top: 6px; line-height: 1.4; }
+.phub-plan-extends {
+  font-size: 13px; font-weight: 700; margin-top: 8px; color: #a86e14;
+  background: rgba(201, 138, 45, .12); border-radius: 8px; padding: 7px 10px; display: inline-block;
+}
+.phub-note { font-size: 12.5px; color: var(--card-mut, #6d6d78); line-height: 1.5; margin-top: 14px; }
+.phub-err { color: #b3261e; font-size: 13px; min-height: 16px; margin-top: 6px; }
+.phub-welcome-ico {
+  width: 64px; height: 64px; border-radius: 20px; margin: 6px auto 12px;
+  display: flex; align-items: center; justify-content: center; font-size: 32px;
+  background: linear-gradient(135deg, #ffd166, #c98a2d);
+}
+.phub-sheet.center { text-align: center; }
+.phub-sheet.center .phub-benefits { text-align: left; max-width: 340px; margin-left: auto; margin-right: auto; }
+.phub-cta-full {
+  display: block; width: 100%; margin-top: 16px; border: 0; border-radius: 12px; cursor: pointer;
+  padding: 14px; font-size: 15px; font-weight: 800; min-height: 50px;
+  background: linear-gradient(135deg, #ffd166, #c98a2d); color: #4a3203;
+}
+
+/* ---------- Premium Centre page ---------- */
+.phub-page {
+  position: fixed; inset: 0; z-index: 99980; background: var(--bg, #f2f2f5);
+  overflow-y: auto; color: var(--ink);
+}
+/* Keep the page header clear of the fixed Open Beta bar when it is shown. */
+body:has(> #nm-beta-bar) .phub-page { padding-top: 118px; }
+.phub-page-wrap { max-width: 640px; margin: 0 auto; padding: 0 0 40px; }
+.phub-page-top {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; background: var(--chrome, #fff); border-bottom: 1px solid var(--line-soft, #efeff3);
+}
+.phub-page-top h2 { margin: 0; font-size: 18px; font-weight: 800; }
+.phub-page-body { padding: 6px 0 0; }
+.phub-page .phub-card { margin-top: 12px; }
+.phub-sec {
+  margin: 14px 14px 0; background: var(--card, #fff); border: 1px solid var(--line-soft, #efeff3);
+  border-radius: 18px; padding: 16px;
+}
+.phub-sec h3 { margin: 0 0 8px; font-size: 15.5px; font-weight: 800; }
+.phub-sec p, .phub-sec li { font-size: 13.5px; line-height: 1.55; color: var(--ink); }
+.phub-sec p { margin: 0 0 8px; }
+.phub-sec ol { margin: 0; padding-left: 20px; }
+.phub-sec ol li { padding: 3px 0; }
+.phub-hist-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 0;
+  border-top: 1px solid var(--line-soft, #efeff3);
+}
+.phub-hist-row:first-of-type { border-top: 0; }
+.phub-hist-row b { font-size: 13.5px; display: block; }
+.phub-hist-row small { font-size: 12px; color: var(--card-mut, #6d6d78); }
+.phub-chip {
+  margin-left: auto; flex: 0 0 auto; font-size: 11px; font-weight: 800; padding: 4px 9px; border-radius: 99px;
+  background: var(--input, #f0f0f4); color: var(--card-mut, #6d6d78);
+}
+.phub-chip.ok { background: rgba(28, 171, 85, .14); color: #0d8a42; }
+.phub-chip.wait { background: rgba(255, 176, 46, .18); color: #9a6206; }
+.phub-chip.bad { background: rgba(232, 56, 13, .12); color: #b3261e; }
+.phub-empty { font-size: 13.5px; color: var(--card-mut, #6d6d78); padding: 6px 0 2px; }
+.phub-wa {
+  display: inline-block; margin-top: 4px; font-weight: 700; color: #0d8a42; text-decoration: none;
+}

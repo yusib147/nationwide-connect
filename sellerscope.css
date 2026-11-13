@@ -1,0 +1,42 @@
+/* Nationwide Media Connect — sellerscope.css (2026-11-02)
+   Styles for the seller-store scope tools (sellerscope.js): the related
+   strip, the category chips and the See all button. Uses the app's own
+   theme variables so Light Clean and OLED Black both hold. */
+.ssc-wrap { padding: 10px 16px 2px; }
+.ssc-rel-hd { font-size: 15px; font-weight: 800; margin: 4px 0 8px; }
+.ssc-rel-row {
+  display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.ssc-rel-row::-webkit-scrollbar { display: none; }
+.ssc-mini {
+  flex: 0 0 108px; width: 108px; text-align: left; cursor: pointer;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  border-radius: 12px; padding: 6px; font: inherit;
+}
+.ssc-mini img, .ssc-mini-noimg {
+  width: 100%; height: 72px; object-fit: cover; border-radius: 8px;
+  display: block; background: var(--line-soft);
+}
+.ssc-mini-t {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; font-size: 12px; font-weight: 600; margin-top: 5px; line-height: 1.3;
+}
+.ssc-mini-p { display: block; font-size: 12px; font-weight: 800; color: var(--acc); margin-top: 2px; }
+.ssc-chips {
+  display: flex; gap: 8px; overflow-x: auto; padding: 8px 0 4px;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.ssc-chips::-webkit-scrollbar { display: none; }
+.ssc-chip {
+  flex: 0 0 auto; border: 1px solid var(--line); background: transparent;
+  color: var(--ink); border-radius: 999px; padding: 7px 13px;
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.ssc-chip.on { background: var(--acc-grad); color: #fff; border-color: transparent; }
+.ssc-more { padding: 10px 16px 6px; }
+.ssc-seeall {
+  width: 100%; padding: 12px; border-radius: 12px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  font: inherit; font-size: 14px; font-weight: 800;
+}

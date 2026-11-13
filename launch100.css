@@ -1,0 +1,79 @@
+/* Nationwide Media Connect — Launch 100 promo strips (2026-11-12).
+   Shown while the launch offer runs: the first 100 new signups post
+   unlimited listings free. The strips hide themselves automatically
+   when every spot is claimed (the paywall is already back by then —
+   the database gate only exempts launch_free profiles). Launch
+   members keep a green member strip on the Sell screen. */
+.launch100 {
+  margin: 14px 14px 0;
+  border-radius: 16px;
+  padding: 14px 16px 13px;
+  color: #fff;
+  background: linear-gradient(120deg, #e8380d 0%, #f96d00 58%, #ffa41c 100%);
+  box-shadow: 0 8px 22px rgba(232, 56, 13, 0.28);
+  position: relative;
+  overflow: hidden;
+}
+.launch100::after {
+  content: "";
+  position: absolute;
+  right: -34px;
+  top: -34px;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  pointer-events: none;
+}
+.launch100-kicker {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.92;
+}
+.launch100-title {
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.25;
+  margin-top: 3px;
+}
+.launch100-sub {
+  font-size: 13.5px;
+  line-height: 1.45;
+  margin-top: 4px;
+  opacity: 0.97;
+  max-width: 92%;
+}
+.launch100-sub b { font-weight: 800; }
+.launch100-bar {
+  margin-top: 10px;
+  height: 8px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.32);
+  overflow: hidden;
+}
+.launch100-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: #fff;
+  width: 0%;
+  transition: width 0.6s ease;
+}
+.launch100-pill {
+  display: inline-block;
+  margin-top: 10px;
+  background: #fff;
+  color: #c22e06;
+  font-size: 12.5px;
+  font-weight: 800;
+  border-radius: 99px;
+  padding: 5px 12px;
+}
+.launch100.member {
+  background: linear-gradient(120deg, #0e7a3d 0%, #1cab55 60%, #35c26e 100%);
+  box-shadow: 0 8px 22px rgba(28, 171, 85, 0.3);
+}
+.launch100.member .launch100-pill { color: #0e7a3d; }
+.launch100.in-form { margin: 0 0 14px; }
+.launch100.in-sell { margin: 0 0 14px; }

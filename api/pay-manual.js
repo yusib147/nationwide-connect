@@ -6,6 +6,7 @@
 // lib.fulfill() as a verified Paystack payment (idempotent, race-safe,
 // and it is the only place referral rewards are minted).
 var lib = require("./_paylib");
+var expiry = require("./_expiry");
 var crypto = require("crypto");
 
 function bridgeOk(req) {
@@ -19,6 +20,28 @@ function bridgeOk(req) {
 module.exports = async function (req, res) {
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store");
+  /* ---------- daily Premium expiry check (Vercel Cron, 2026-10-25) ----------
+     Vercel Cron issues a GET; the Hobby plan's 12-function cap means this
+     rides on this existing route instead of a new endpoint. Vercel sends
+     "Authorization: Bearer <CRON_SECRET>" automatically once the env var
+     exists; a manual run may send "x-cron-secret: <secret>". */
+  var cronParam = null;
+  try { cronParam = new URL(req.url || "", "http://localhost").searchParams.get("cron"); } catch (e) {}
+  if (req.method === "GET" && cronParam === "premium-expiry") {
+    var cSecret = process.env.CRON_SECRET || "";
+    var cAuth = (req.headers && req.headers["authorization"]) || "";
+    var cX = (req.headers && req.headers["x-cron-secret"]) || "";
+    if (!cSecret || (cAuth !== "Bearer " + cSecret && cX !== cSecret)) {
+      return res.status(401).send(JSON.stringify({ error: "unauthorized" }));
+    }
+    if (!process.env.SUPABASE_SERVICE_ROLE) return res.status(500).send(JSON.stringify({ error: "service role not configured" }));
+    try {
+      var out = await expiry.run(lib);
+      return res.status(200).send(JSON.stringify(Object.assign({ ok: true }, out)));
+    } catch (e) {
+      return res.status(502).send(JSON.stringify({ error: "expiry check failed" }));
+    }
+  }
   if (req.method !== "POST") return res.status(405).send(JSON.stringify({ error: "POST only" }));
   var b = req.body || {};
   if (typeof b === "string") { try { b = JSON.parse(b); } catch (e) { b = {}; } }

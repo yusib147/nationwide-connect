@@ -401,13 +401,13 @@
       cover.innerHTML = (coverUrl ? '<img src="' + esc(coverUrl) + '" alt="">' : "") +
         '<span class="shx-cover-tag">\uD83C\uDFEA Shop</span>';
       store.insertBefore(cover, store.firstChild);
-      /* info line: hours + location */
-      var loc = [pr.lga, pr.state].filter(Boolean).join(", ") || pr.address || "";
-      if (pr.business_hours || loc) {
+      /* info line: business hours only — the seller's location renders exactly
+         once on this page, in the nm-store-loc line under the identity block
+         (lga.js). Painting it here too tripled it on screen (2026-10-26). */
+      if (pr.business_hours) {
         var info = document.createElement("div");
         info.className = "shx-infoline";
-        info.innerHTML = (pr.business_hours ? '<span>\uD83D\uDD50 ' + esc(pr.business_hours) + "</span>" : "") +
-          (loc ? '<span>\uD83D\uDCCD ' + esc(loc) + "</span>" : "");
+        info.innerHTML = '<span>\uD83D\uDD50 ' + esc(pr.business_hours) + "</span>";
         var stats = $(".store2-stats", store);
         if (stats) { stats.parentNode.insertBefore(info, stats); }
       }
@@ -520,16 +520,16 @@
       + '<p class="shx-promo-tx">Your item stays pinned at the <b>top of Home and its category</b> for <b>7 days</b>, with a \uD83D\uDE80 Promoted tag, so buyers see it first.'
       + (promoted ? ' It is promoted until <b>' + new Date(p.promotedUntil).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) + '</b> \u2014 paying again adds 7 more days.' : '')
       + '</p>'
-      + '<button class="shx-act" id="shx-promo-pay">Pay \u20A61,000 with Paystack</button>'
+      + '<button class="shx-act" id="shx-promo-pay">Pay \u20A61,000</button>'
       + '<button class="shx-act shx-ghost" id="shx-promo-no">Not now</button></div>';
     document.body.appendChild(ov);
     ov.addEventListener("click", function (e) { if (e.target === ov) { closeSheet(); } });
     $("#shx-x").addEventListener("click", closeSheet);
     $("#shx-promo-no").addEventListener("click", closeSheet);
     $("#shx-promo-pay").addEventListener("click", function () {
-      var b = this; b.disabled = true; b.textContent = "Opening Paystack\u2026";
+      var b = this; b.disabled = true; b.textContent = "Opening payment\u2026";
       DB().startPayment("promote_7d", p.id).catch(function (err) {
-        b.disabled = false; b.textContent = "Pay \u20A61,000 with Paystack";
+        b.disabled = false; b.textContent = "Pay \u20A61,000";
         toast((err && err.message) || "Could not start payment.");
       });
     });

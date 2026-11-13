@@ -7,19 +7,42 @@
 .nm-rail-head{display:flex;align-items:center;gap:8px;margin:0 2px 8px}
 .nm-rail-head b{font-size:13px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--ink)}
 .nm-rail-head span{font-size:11px;font-weight:800;letter-spacing:1.2px;color:var(--acc2);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
-.nm-rail-track{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px;scrollbar-width:none}
+.nm-rail-track{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px;scrollbar-width:none;align-items:flex-start}
 .nm-rail-track::-webkit-scrollbar{display:none}
 .nm-rail-card{flex:0 0 78%;max-width:340px;scroll-snap-align:start;border-radius:16px;overflow:hidden;background:#101014;color:#fff;position:relative;cursor:pointer;border:0;padding:0;text-align:left;font-family:inherit;display:block;width:100%}
 @media(min-width:700px){.nm-rail-card{flex-basis:31.5%}}
-.nm-rail-media{width:100%;height:132px;object-fit:cover;display:block;background:#000}
+.nm-rail-media{width:100%}
+/* Ad media fit (eighth pass, Ibrahim's approved mockup 2026-10-24):
+   ONE FIXED FRAME EVERYWHERE — 4:5 portrait at the LISTING picture's
+   width (.grid > .card > .card-photo — 185px wide at a 412px phone,
+   so the frame stands 185x231), sized by bannerads.js fitStage. The
+   frame height NEVER follows the creative's own ratio again: build
+   m's native-ratio frames let a 9:16 video stand 185x329 and a 9:20
+   shot 185x411 — towers that disturbed the page, which is what he
+   rejected. Inside the fixed frame the creative is contain-fitted
+   over a blurred copy of itself (.adfit-bg), so the full creative is
+   visible from the first paint and can never be cropped or zoomed.
+   The CSS aspect-ratio below is the pre-JS default so a stage is
+   already 4:5 before fitStage measures the listing width; video
+   stages take the same 4:5 (no more 9:16 default). */
+.adfit{position:relative;overflow:hidden;background:#0b0b10;display:block;width:100%;aspect-ratio:4/5;margin:0 auto}
+.adfit-vid{aspect-ratio:4/5}
+.adfit-in{position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden}
+.adfit-bg{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;filter:blur(18px) brightness(.55);transform:scale(1.18);display:block;pointer-events:none}
+.adfit-m{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;display:block}
+/* Frame furniture (approved mockup): a SPONSORED tag riding on the
+   frame itself, and a VIDEO chip on video creatives. Shared by the top
+   slot (premium.js stages), rail/band stages and the grid card. */
+.ad-tag{position:absolute;top:8px;left:8px;z-index:3;background:rgba(0,0,0,.62);color:#fff;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3.5px 8px;border-radius:6px;pointer-events:none}
+.ad-vtag{position:absolute;right:8px;bottom:8px;z-index:3;background:rgba(0,0,0,.62);color:#fff;font-size:10px;font-weight:700;letter-spacing:.04em;padding:3.5px 8px;border-radius:6px;pointer-events:none}
 .nm-rail-ph{height:132px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#2b1509,#160c05);padding:14px;text-align:center}
 .nm-rail-ph .nm-rail-big{font-size:17px;font-weight:900;line-height:1.25}
 .nm-rail-ph .nm-rail-small{font-size:12px;color:rgba(255,255,255,.7);line-height:1.45}
-.nm-rail-body{padding:10px 12px 12px}
+.nm-rail-body{padding:8px 12px 10px}
 .nm-rail-kick{font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--acc2)}
 .nm-rail-title{font-size:15px;font-weight:800;margin:3px 0 2px;line-height:1.3}
-.nm-rail-sub{font-size:12px;color:rgba(255,255,255,.68);line-height:1.45}
-.nm-rail-cta{display:inline-block;margin-top:8px;background:var(--acc-grad);color:#fff;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:800}
+.nm-rail-sub{font-size:12px;color:rgba(255,255,255,.68);line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.nm-rail-cta{display:inline-block;margin-top:6px;background:var(--acc-grad);color:#fff;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:800}
 .nm-rail-house{background:linear-gradient(135deg,#1a1a20,#101014)}
 .nm-rail-card:focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
 
@@ -28,16 +51,32 @@
 .nm-band-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .nm-band-head b{font-size:14px;font-weight:800;color:var(--ink)}
 .nm-band-head span{font-size:10px;font-weight:800;letter-spacing:1.2px;color:var(--acc2);border:1px solid var(--line);border-radius:6px;padding:2px 7px;text-transform:uppercase}
-.nm-band-track{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px;scrollbar-width:none}
+.nm-band-track{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px;scrollbar-width:none;align-items:flex-start}
 .nm-band-track::-webkit-scrollbar{display:none}
 .nm-band-card{flex:0 0 82%;max-width:330px;scroll-snap-align:start;background:var(--chrome);border:1px solid var(--line-soft);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-card);cursor:pointer;font-family:inherit;text-align:left;padding:0;color:var(--ink);display:block;width:100%}
 @media(min-width:700px){.nm-band-card{flex-basis:31.5%}}
-.nm-band-media{width:100%;height:120px;object-fit:cover;display:block;background:#000}
+.nm-band-media{width:100%}
 .nm-band-ph{height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;background:var(--chrome2);padding:12px;text-align:center}
-.nm-band-body{padding:10px 12px 12px}
+.nm-band-body{padding:8px 12px 10px}
 .nm-band-biz{font-size:14px;font-weight:800;color:var(--ink)}
-.nm-band-sub{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.45}
+.nm-band-sub{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .nm-band-cta{display:inline-block;margin-top:8px;background:var(--acc-grad);color:#fff;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:800}
+
+/* ---------- sponsored card inside the home grid (eighth pass) ----------
+   Exactly a listing card's box: same shell (.card anatomy mirrored,
+   deliberately NOT the .card class — homefeed.js counts .card[data-id]
+   against the catalogue and must never see this), a 1:1 media area
+   like .card-photo with the portrait creative fitted whole over its
+   blurred copy, then title / shop / View shop. Injected by
+   bannerads.js only into the DEFAULT home feed (it stands down under
+   any filter, exactly like homefeed.js) and never counts toward the
+   26-listing cap. */
+.ad-grid-card{position:relative;background:var(--card);border-radius:18px;overflow:hidden;box-shadow:var(--shadow-card);cursor:pointer;display:block}
+.ad-grid-media{width:100%;aspect-ratio:1/1;margin:0}
+.ad-grid-body{padding:11px 12px 13px}
+.ad-grid-title{font-size:13.5px;font-weight:700;color:var(--card-ink);margin-top:1px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ad-grid-shop{font-size:11.5px;color:var(--card-mut);font-weight:600;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ad-grid-cta{display:inline-block;margin-top:8px;background:var(--acc-grad);color:#fff;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:800}
 
 /* ---------- My banner ads hub ---------- */
 .nm-ba-page{position:fixed;inset:0;z-index:99990;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -71,8 +110,8 @@
 .nm-ba-meta{font-size:12.5px;color:var(--muted);line-height:1.6;margin:6px 0}
 .nm-ba-meta b{color:var(--ink)}
 .nm-ba-thumbs{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}
-.nm-ba-thumb{width:110px;height:110px;border-radius:12px;object-fit:cover;background:#000}
-video.nm-ba-thumb{width:220px;height:auto;max-height:160px}
+.nm-ba-thumb{width:110px;height:110px;border-radius:12px;object-fit:contain;background:var(--chrome2)}
+video.nm-ba-thumb{width:176px;height:auto;max-height:128px;object-fit:contain}
 .nm-ba-in{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);padding:11px 13px;font-size:14px;font-family:inherit;margin-bottom:9px}
 .nm-ba-in:focus{outline:0;border-color:var(--acc2)}
 .nm-ba-mode{display:flex;gap:8px;margin-bottom:12px}
@@ -80,3 +119,23 @@ video.nm-ba-thumb{width:220px;height:auto;max-height:160px}
 .nm-ba-mode button.on{border-color:var(--acc2);background:var(--acc-soft)}
 .nm-ba-err{font-size:13px;color:#c0392b;font-weight:700;margin:0 0 10px}
 .nm-ba-wa{display:inline-flex;align-items:center;gap:8px;margin-top:6px;padding:11px 16px;min-height:44px;border-radius:12px;background:#22c55e;color:#fff;font-weight:800;font-size:13.5px;text-decoration:none}
+
+/* ---------- shimmer placeholders (build n wave 2) ----------
+   Why the white: on a fast fling, listing photos (loading="lazy",
+   img at opacity:0 until its onload) have not even started
+   downloading, so .card-photo showed only its flat --chrome2 base —
+   dead white voids. Every not-yet-painted media box now carries the
+   app's own skeleton shimmer (the same gradient + `shimmer`
+   keyframes as .skel-photo/.shimmer in styles.css, built from theme
+   variables so it follows LIGHT CLEAN / OLED BLACK). The moment the
+   real photo paints it covers the shimmer completely: no overlay,
+   no layout shift, loaded cards look exactly as before. */
+.card-photo:not(.card-photo-empty):not(.broken),
+.adfit, .ad-grid-media {
+  background-image: linear-gradient(100deg, var(--line-soft) 40%, var(--line) 50%, var(--line-soft) 60%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s infinite linear;
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-photo, .adfit, .ad-grid-media, .ad-banner .ad-stage { animation: none; }
+}

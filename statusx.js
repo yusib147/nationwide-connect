@@ -123,13 +123,24 @@
   }
   function injectChip(stv, row) {
     var D = DB(); if (!D) { return; }
+    var rowId = row.id;
     productOf(row.product_id).then(function (p) {
       if (!p || !document.body.contains(stv)) { return; }
-      if (document.querySelector("#status-root .stx-chip")) { return; }
+      /* The viewer may have moved on while the product loaded: only the
+         current row's chip may be appended; a newer tryInjectChip owns
+         any newer row. */
+      var cur = currentViewRow();
+      if (!cur || String(cur.id) !== String(rowId)) { return; }
+      var old = document.querySelector("#status-root .stx-chip");
+      if (old) {
+        if (old.getAttribute("data-stx-row") === String(rowId)) { return; }
+        old.remove();
+      }
       var own = String(me()) === String(row.user_id);
       var sold = (p.status || "active") !== "active" || p.quantity === 0;
       var chip = document.createElement("div");
       chip.className = "stx-chip" + (sold ? " sold" : "");
+      chip.setAttribute("data-stx-row", String(rowId));
       chip.innerHTML = '<button class="stx-cgo-btn" type="button" aria-label="Open item">' +
         ((p.images && p.images[0]) ? '<img src="' + esc(p.images[0]) + '" alt="">' : '<span class="stx-cfb">\uD83D\uDECD</span>') +
         '<span class="stx-cmain"><span class="stx-ct">' + esc(p.title || "") + '</span>' +
@@ -164,17 +175,31 @@
       host.appendChild(chip);
     });
   }
-  function tryInjectChip() {
-    var root = $("#status-root"); if (!root) { return; }
-    var stv = $(".stv", root); if (!stv) { return; }
-    if (!$("#stv-md", stv)) { return; }              /* viewer only, not the composer preview */
-    if (document.querySelector("#status-root .stx-chip")) { return; }
-    if (!_viewRows || !_viewRows.length) { return; }
+  /* The row currently on screen in the viewer: segments marked done equal
+     the flat media index (segments are rebuilt on every item change). */
+  function currentViewRow() {
+    var root = $("#status-root"); if (!root) { return null; }
+    var stv = $(".stv", root); if (!stv) { return null; }
+    if (!$("#stv-md", stv)) { return null; }          /* viewer only, not the composer preview */
+    if (!_viewRows || !_viewRows.length) { return null; }
     var idx = stv.querySelectorAll(".stv-seg.done").length;
     var flat = [];
     _viewRows.forEach(function (r) { (r.media_urls || []).forEach(function () { flat.push(r); }); });
-    var row = flat[idx];
-    if (row && row.product_id) { injectChip(stv, row); }
+    return flat[idx] || null;
+  }
+  function tryInjectChip() {
+    var root = $("#status-root"); if (!root) { return; }
+    var stv = $(".stv", root); if (!stv) { return; }
+    var row = currentViewRow(); if (!row) { return; }
+    /* A chip belongs to exactly one row: when the viewer moves to another
+       row, drop the old chip first — otherwise the first row's chip (and
+       its Chat target) wrongly survives for the whole viewer session. */
+    var old = root.querySelector(".stx-chip");
+    if (old) {
+      if (old.getAttribute("data-stx-row") === String(row.id)) { return; }
+      old.remove();
+    }
+    if (row.product_id) { injectChip(stv, row); }
   }
   function wrapViewer() {
     if (!window.NM_statusViewer || window.NM_statusViewer._stx) { return; }
@@ -187,7 +212,10 @@
     var root = $("#status-root");
     if (!root || root._stxObs) { return; }
     root._stxObs = true;
-    new MutationObserver(function () { tryInjectChip(); }).observe(root, { childList: true });
+    /* Item changes only touch descendants (#sv-segs / #stv-md), never the
+       root's own children — without subtree observation the chip could
+       never follow the viewer from one row to the next. */
+    new MutationObserver(function () { tryInjectChip(); }).observe(root, { childList: true, subtree: true });
   }
   /* The viewer's invisible prev/next tap zones can swallow taps meant for
      the product chip. Capture-phase delegation by coordinates makes the

@@ -1,0 +1,27 @@
+/* Nationwide Media Connect — tap-target pass (2026-11-05, overnight scan rotation #7).
+   Mobile/a11y sweep found real controls under the project's 44px tap-target rule
+   that navback's injected 44px CSS does not cover (it covers back/close controls
+   only). This file fixes those, loaded LAST in <head> so it wins at equal
+   specificity. No colours, copy, layout structure or behaviour changes:
+   - remove buttons grow slightly + gain an invisible hit expansion, so the
+     effective tap area reaches 44px without covering neighbouring cells;
+   - small chips/buttons gain min-height:44px (their rows are already taller
+     than 44px or grow by a few px, so no layout shift of consequence);
+   - the status tag-clear x becomes a 44px target inside its 60px-tall row. */
+
+/* 1. Tiny remove buttons: sell-form photo thumbs (was 28px) and status
+   composer grid cells (was 24px). Visual size grows to 36px; the invisible
+   ::after expansion brings the hit area to >=44px on both axes even where
+   the parent's overflow:hidden clips the expansion at the cell edge
+   (thumb: 36px box at offset 2px + 6px expansion = 44px after clipping;
+   composer cell: 36px box at offset 4px + 5px expansion = 45px after clipping). */
+.photo-thumb .rm{width:36px;height:36px;font-size:18px}
+.photo-thumb .rm::after{content:"";position:absolute;inset:-6px}
+.stc-cl button{width:36px;height:36px;font-size:15px}
+.stc-cl button::after{content:"";position:absolute;inset:-5px}
+
+/* 2. Small interactive chips/buttons that measured 32-40px tall. */
+.qr-chip,.ssc-chip,.sort-pill,.ux-filterbar .ux-fbtn,.nm-hv-chip,.stx-cchat,.shx-oc-btn{min-height:44px}
+
+/* 3. Status tag-clear x (was a ~28px span inside a 60px-tall tag row). */
+.stx-tx{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0}

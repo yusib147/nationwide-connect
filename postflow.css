@@ -1,0 +1,32 @@
+/* Nationwide Media Connect — postflow.css (2026-10-26)
+   The "Posting your listing…" overlay for the sell flow. Sits above
+   app content but below the suspension gate (99998). */
+#nm-posting {
+  position: fixed; inset: 0; z-index: 99990;
+  background: rgba(10, 10, 12, .55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+#nm-posting[hidden] { display: none; }
+#nm-posting .pf-card {
+  background: var(--card, #ffffff);
+  color: var(--ink, #16181d);
+  border-radius: 16px;
+  padding: 26px 30px;
+  max-width: 320px; width: 100%;
+  text-align: center;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .35);
+}
+#nm-posting .pf-spinner {
+  width: 46px; height: 46px; margin: 0 auto 14px;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 90, 31, .22);
+  border-top-color: #ff5a1f;
+  animation: pfSpin .8s linear infinite;
+}
+@keyframes pfSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  #nm-posting .pf-spinner { animation-duration: 2.4s; }
+}
+#nm-posting .pf-title { font-size: 16px; font-weight: 700; }
+#nm-posting .pf-sub { font-size: 13px; opacity: .72; margin-top: 5px; }

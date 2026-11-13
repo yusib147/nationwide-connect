@@ -242,7 +242,16 @@
     box.id = "nm-rev-store";
     box.setAttribute("data-sid", String(sid));
     box.innerHTML = '<div class="nm-rev-hd"><h3>Feedback</h3><span class="nm-rev-count" id="nm-rev-store-sum">Loading…</span><button type="button" class="nm-rev-btn" id="nm-rev-store-open">Leave feedback</button></div><div id="nm-rev-store-list"></div>';
-    grid.parentNode.insertBefore(box, grid);
+    /* Feedback sits BELOW the listings (2026-10-26): it used to be wedged
+       between the "All listings" head and the first listing. */
+    grid.parentNode.insertBefore(box, grid.nextSibling);
+    /* The owner never gets a "Leave feedback" button on their own shop. */
+    me().then(function (u) {
+      if (u && String(u.id) === String(sid)) {
+        var ob = document.getElementById("nm-rev-store-open");
+        if (ob) { ob.remove(); }
+      }
+    }).catch(function () {});
     box.querySelector("#nm-rev-store-open").addEventListener("click", function () {
       var nm = "";
       try { var h = screen.querySelector(".store2-name, .seller-name, h2"); if (h) nm = h.textContent.trim(); } catch (e) {}
