@@ -24,9 +24,9 @@
   function DB() { return window.NM_DB || null; }
   function sb() { var d = DB(); return (d && d.client) ? d.client : null; }
 
-  function getPromo() {
+  function getPromo(force) {
     var now = Date.now();
-    if (promoCache.row !== null && now - promoCache.at < 60000) {
+    if (!force && promoCache.row !== null && now - promoCache.at < 60000) {
       return Promise.resolve(promoCache.row);
     }
     var c = sb();
@@ -96,7 +96,7 @@
       '<div class="launch100-sub">Sign up now and post as many items as you want. No payment needed. When the 100 spots finish, the normal 3 free listings return.</div>' +
       '<div class="launch100-bar"><div class="launch100-fill" style="width:' +
         Math.min(100, Math.round((state.claimed / Math.max(1, state.target)) * 100)) + '%"></div></div>' +
-      '<span class="launch100-pill">' + esc(left) + ' of ' + esc(state.target) + ' spots left</span>';
+      '<span class="launch100-pill">' + esc(state.claimed) + ' taken \u00b7 ' + esc(left) + ' of ' + esc(state.target) + ' spots left</span>';
   }
 
   function placeStrips(state) {
@@ -128,8 +128,8 @@
     });
   }
 
-  function render() {
-    return Promise.all([getPromo(), currentUserFree()]).then(function (rs) {
+  function render(force) {
+    return Promise.all([getPromo(!!force), currentUserFree()]).then(function (rs) {
       var promo = rs[0], member = rs[1];
       if (!promo && !member) {
         placeStrips({ active: false, target: 100, claimed: 100, member: false });
@@ -151,7 +151,10 @@
       tries++;
       if (sb() && patchGate()) {
         render();
-        setInterval(function () { if (!document.hidden) { render(); } }, 120000);
+        setInterval(function () { if (!document.hidden) { render(true); } }, 30000);
+        document.addEventListener("visibilitychange", function () {
+          if (!document.hidden) { render(true); }
+        });
         return;
       }
       if (tries < 40) { setTimeout(wait, 250); }
