@@ -49,6 +49,7 @@ module.exports = async function (req, res) {
   var out = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
     "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\" xmlns:image=\"http://www.google.com/schemas/sitemap-image/1.1\">\n";
   out += urlEntry(SITE + "/", null, "hourly", "1.0", null, null);
+  out += urlEntry(SITE + "/faq.html", null, "monthly", "0.7", null, null);
   try {
     var url = SUPABASE_URL + "/rest/v1/products?select=id,title,created_at,image_urls" +
       "&status=eq.active&order=created_at.desc&limit=1000";
